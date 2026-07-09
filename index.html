@@ -11,16 +11,31 @@
 
     <script>
         // ============================================
-        // DADOS INICIAIS
+        // DADOS INICIAIS - 15 BOBINAS
         // ============================================
         let bobinas = [
+            // Bobinas existentes
             { id: 1, localizacao: 'Depósito A - Prateleira 1', fabricante: 'Corning', lote: 'LOT-001', tipo: 'SMF-28', capacidade: 24, metragemInicial: 2000, metrosUsados: 150, status: 'Em uso' },
             { id: 2, localizacao: 'Depósito B - Prateleira 3', fabricante: 'Prysmian', lote: 'LOT-002', tipo: 'G.652.D', capacidade: 48, metragemInicial: 3000, metrosUsados: 0, status: 'Nova' },
-            { id: 3, localizacao: 'Depósito A - Prateleira 2', fabricante: 'Furukawa', lote: 'LOT-003', tipo: 'G.655', capacidade: 12, metragemInicial: 1500, metrosUsados: 1500, status: 'Finalizada' }
+            { id: 3, localizacao: 'Depósito A - Prateleira 2', fabricante: 'Furukawa', lote: 'LOT-003', tipo: 'G.655', capacidade: 12, metragemInicial: 1500, metrosUsados: 1500, status: 'Finalizada' },
+            
+            // Novas bobinas adicionadas
+            { id: 4, localizacao: 'Depósito C - Prateleira 1', fabricante: 'Corning', lote: 'LOT-004', tipo: 'SMF-28e', capacidade: 48, metragemInicial: 2500, metrosUsados: 0, status: 'Nova' },
+            { id: 5, localizacao: 'Depósito A - Prateleira 4', fabricante: 'Prysmian', lote: 'LOT-005', tipo: 'G.657.A1', capacidade: 24, metragemInicial: 1800, metrosUsados: 300, status: 'Em uso' },
+            { id: 6, localizacao: 'Depósito B - Prateleira 2', fabricante: 'Furukawa', lote: 'LOT-006', tipo: 'G.652.D', capacidade: 96, metragemInicial: 4000, metrosUsados: 250, status: 'Em uso' },
+            { id: 7, localizacao: 'Depósito D - Prateleira 1', fabricante: 'Draka', lote: 'LOT-007', tipo: 'G.655', capacidade: 24, metragemInicial: 2000, metrosUsados: 0, status: 'Nova' },
+            { id: 8, localizacao: 'Depósito C - Prateleira 3', fabricante: 'Corning', lote: 'LOT-008', tipo: 'SMF-28', capacidade: 48, metragemInicial: 3000, metrosUsados: 2800, status: 'Em uso' },
+            { id: 9, localizacao: 'Depósito A - Prateleira 5', fabricante: 'Prysmian', lote: 'LOT-009', tipo: 'G.657.A2', capacidade: 12, metragemInicial: 1200, metrosUsados: 1200, status: 'Finalizada' },
+            { id: 10, localizacao: 'Depósito B - Prateleira 4', fabricante: 'Furukawa', lote: 'LOT-010', tipo: 'G.652.D', capacidade: 72, metragemInicial: 3500, metrosUsados: 100, status: 'Em uso' },
+            { id: 11, localizacao: 'Depósito D - Prateleira 2', fabricante: 'Draka', lote: 'LOT-011', tipo: 'SMF-28', capacidade: 24, metragemInicial: 2200, metrosUsados: 0, status: 'Nova' },
+            { id: 12, localizacao: 'Depósito C - Prateleira 2', fabricante: 'Corning', lote: 'LOT-012', tipo: 'G.655', capacidade: 48, metragemInicial: 2800, metrosUsados: 500, status: 'Em uso' },
+            { id: 13, localizacao: 'Depósito A - Prateleira 3', fabricante: 'Prysmian', lote: 'LOT-013', tipo: 'SMF-28e', capacidade: 96, metragemInicial: 4500, metrosUsados: 0, status: 'Nova' },
+            { id: 14, localizacao: 'Depósito B - Prateleira 1', fabricante: 'Furukawa', lote: 'LOT-014', tipo: 'G.657.A1', capacidade: 24, metragemInicial: 1600, metrosUsados: 900, status: 'Em uso' },
+            { id: 15, localizacao: 'Depósito D - Prateleira 3', fabricante: 'Draka', lote: 'LOT-015', tipo: 'G.652.D', capacidade: 48, metragemInicial: 3200, metrosUsados: 0, status: 'Nova' }
         ];
 
         let movimentacoes = [];
-        let proximoId = 4;
+        let proximoId = 16;
         let filtroBusca = '';
 
         // ============================================
