@@ -33,6 +33,7 @@
         let proximoId = 1;
         let filtroBusca = '';
         let usuarioAtual = null;
+        let saidaEditandoId = null;
 
         // ============================================
         // FUNÇÕES DO SUPABASE
@@ -136,6 +137,40 @@
             } catch (error) {
                 console.error('❌ Erro ao salvar movimentação:', error);
                 return null;
+            }
+        }
+
+        async function atualizarMovimentacaoBD(id, dados) {
+            try {
+                const response = await fetch(`${SUPABASE_URL}/rest/v1/movimentacoes?id=eq.${id}`, {
+                    method: 'PATCH',
+                    headers: {
+                        'apikey': SUPABASE_KEY,
+                        'Authorization': `Bearer ${SUPABASE_KEY}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(dados)
+                });
+                return response.ok;
+            } catch (error) {
+                console.error('❌ Erro ao atualizar movimentação:', error);
+                return false;
+            }
+        }
+
+        async function excluirMovimentacaoBD(id) {
+            try {
+                const response = await fetch(`${SUPABASE_URL}/rest/v1/movimentacoes?id=eq.${id}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'apikey': SUPABASE_KEY,
+                        'Authorization': `Bearer ${SUPABASE_KEY}`
+                    }
+                });
+                return response.ok;
+            } catch (error) {
+                console.error('❌ Erro ao excluir movimentação:', error);
+                return false;
             }
         }
 
@@ -254,20 +289,18 @@
         }
 
         // ============================================
-        // TELA DE DASHBOARD (ATUALIZADA COM GRÁFICOS)
+        // TELA DE DASHBOARD
         // ============================================
         function showDashboard() {
             const user = getUsuarioLogado();
             if (!user) { showLogin(); return; }
 
-            // Calcular totais
             const totalBobinas = bobinas.length;
             const totalMetros = bobinas.reduce((t, b) => t + (b.metragem_inicial - b.metros_usados), 0);
             const totalConsumido = bobinas.reduce((t, b) => t + b.metros_usados, 0);
             const alerta = bobinas.filter(b => (b.metragem_inicial - b.metros_usados) < 1500 && (b.metragem_inicial - b.metros_usados) > 0).length;
             const consumoDia = movimentacoes.filter(m => m.data === new Date().toLocaleDateString('pt-BR')).reduce((t, m) => t + m.metros_utilizados, 0);
 
-            // Gráfico de cada bobina
             const graficoBobinas = bobinas.map(b => {
                 const restante = b.metragem_inicial - b.metros_usados;
                 const percentual = b.metragem_inicial > 0 ? (restante / b.metragem_inicial * 100) : 0;
@@ -302,7 +335,6 @@
 
             document.getElementById('root').innerHTML = `
                 <div class="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 md:p-6">
-                    <!-- Cabeçalho -->
                     <div class="flex flex-wrap justify-between items-center mb-6">
                         <div>
                             <h1 class="text-2xl font-bold text-gray-800 dark:text-white">📊 Dashboard</h1>
@@ -317,7 +349,6 @@
                         </div>
                     </div>
 
-                    <!-- Cards Resumo -->
                     <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
                         <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow border-l-4 border-blue-500">
                             <p class="text-sm text-gray-500 dark:text-gray-400">📦 Total Bobinas</p>
@@ -341,7 +372,6 @@
                         </div>
                     </div>
 
-                    <!-- Gráfico de cada bobina -->
                     <div class="mb-6">
                         <h2 class="text-lg font-semibold text-gray-800 dark:text-white mb-4">📊 Status de Cada Bobina</h2>
                         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -349,7 +379,6 @@
                         </div>
                     </div>
 
-                    <!-- Últimas Movimentações -->
                     <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow">
                         <h2 class="text-lg font-semibold text-gray-800 dark:text-white mb-4">📋 Últimas Movimentações</h2>
                         ${movimentacoes.length === 0 ? '<p class="text-center text-gray-500 dark:text-gray-400 py-4">Nenhuma movimentação registrada.</p>' : 
@@ -556,7 +585,7 @@
         }
 
         // ============================================
-        // FUNÇÕES CRUD
+        // FUNÇÕES CRUD BOBINAS
         // ============================================
         async function salvarBobina(event) {
             event.preventDefault();
@@ -655,12 +684,17 @@
         }
 
         // ============================================
-        // TELA DE SAÍDA
+        // TELA DE SAÍDA (COM EDIÇÃO)
         // ============================================
         function showSaida() {
             if (!podeAlterar()) {
                 alert('❌ Visitante não pode registrar saídas!');
                 showDashboard();
+                return;
+            }
+
+            if (saidaEditandoId) {
+                showFormEditarSaida(saidaEditandoId);
                 return;
             }
 
@@ -738,6 +772,7 @@
                                             <th class="px-4 py-2 text-left">Empresa</th>
                                             <th class="px-4 py-2 text-left">Técnico</th>
                                             <th class="px-4 py-2 text-left">OS</th>
+                                            <th class="px-4 py-2 text-left">Ações</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -752,6 +787,10 @@
                                                     <td class="px-4 py-2">${m.equipe}</td>
                                                     <td class="px-4 py-2">${m.funcionario}</td>
                                                     <td class="px-4 py-2">${m.ordem_servico || '-'}</td>
+                                                    <td class="px-4 py-2">
+                                                        <button onclick="editarSaida(${m.id})" class="text-blue-600 hover:text-blue-800 mr-2" title="Editar saída">✏️</button>
+                                                        <button onclick="excluirSaida(${m.id})" class="text-red-600 hover:text-red-800" title="Excluir saída">🗑️</button>
+                                                    </td>
                                                 </tr>
                                             `;
                                         }).join('')}
@@ -765,7 +804,7 @@
         }
 
         // ============================================
-        // FUNÇÃO PARA REGISTRAR SAÍDA (CORRIGIDA)
+        // FUNÇÃO PARA REGISTRAR SAÍDA
         // ============================================
         async function registrarSaida(event) {
             event.preventDefault();
@@ -822,7 +861,6 @@
                 return; 
             }
 
-            // Calcular novos valores
             const novosMetrosUsados = bobina.metros_usados + metros;
             let novoStatus = bobina.status;
             const restante = bobina.metragem_inicial - novosMetrosUsados;
@@ -833,7 +871,6 @@
                 novoStatus = 'Em uso';
             }
 
-            // Atualizar no banco de dados
             const sucesso = await atualizarBobinaBD(bobinaId, {
                 metros_usados: novosMetrosUsados,
                 status: novoStatus
@@ -844,11 +881,9 @@
                 return;
             }
 
-            // Atualizar localmente
             bobina.metros_usados = novosMetrosUsados;
             bobina.status = novoStatus;
 
-            // Registrar movimentação no banco
             const now = new Date();
             const mov = {
                 bobina_id: bobinaId,
@@ -873,7 +908,6 @@
 
             alert(`✅ Saída registrada!\n📏 ${metros}m utilizados\n📦 Restante: ${restante}m`);
             
-            // Limpar formulário
             document.getElementById('sBobinaId').value = '';
             document.getElementById('sEquipe').value = '';
             document.getElementById('sFuncionario').value = '';
@@ -881,9 +915,248 @@
             document.getElementById('sMetros').value = '';
             document.getElementById('sObservacao').value = '';
             
-            // Recarregar dados e mostrar dashboard atualizado
             await carregarDados();
             showDashboard();
+        }
+
+        // ============================================
+        // FORMULÁRIO DE EDIÇÃO DE SAÍDA
+        // ============================================
+        function showFormEditarSaida(id) {
+            const mov = movimentacoes.find(m => m.id === id);
+            if (!mov) {
+                alert('❌ Movimentação não encontrada!');
+                saidaEditandoId = null;
+                showSaida();
+                return;
+            }
+
+            const bobina = bobinas.find(b => b.id === mov.bobina_id);
+            const nomeBobina = bobina ? `${bobina.fabricante} - ${bobina.lote} - ${bobina.tipo}` : '#' + mov.bobina_id;
+
+            document.getElementById('root').innerHTML = `
+                <div class="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 md:p-6 flex items-center justify-center">
+                    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-2xl p-8">
+                        <div class="flex justify-between items-center mb-6">
+                            <h2 class="text-2xl font-bold text-gray-800 dark:text-white">✏️ Editar Saída</h2>
+                            <button onclick="cancelarEdicaoSaida()" class="text-2xl text-gray-500">✕</button>
+                        </div>
+                        <div class="mb-4 p-3 bg-gray-100 dark:bg-gray-700 rounded-lg">
+                            <p class="text-sm text-gray-600 dark:text-gray-300">
+                                <strong>Bobina:</strong> ${nomeBobina}
+                            </p>
+                            <p class="text-sm text-gray-600 dark:text-gray-300">
+                                <strong>Data:</strong> ${mov.data} ${mov.hora}
+                            </p>
+                            <p class="text-sm text-gray-600 dark:text-gray-300">
+                                <strong>Metros lançados:</strong> <span class="font-bold text-orange-600">${mov.metros_utilizados}m</span>
+                            </p>
+                        </div>
+                        <form onsubmit="salvarEdicaoSaida(event)">
+                            <input type="hidden" id="editMovId" value="${mov.id}">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">🏢 Empresa *</label>
+                                    <input type="text" id="eEquipe" value="${mov.equipe}" class="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white" required>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">👤 Técnico *</label>
+                                    <input type="text" id="eFuncionario" value="${mov.funcionario}" class="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white" required>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">📋 Ordem de Serviço</label>
+                                    <input type="text" id="eOrdem" value="${mov.ordem_servico || ''}" class="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">📏 Metros Utilizados (m) *</label>
+                                    <input type="number" id="eMetros" value="${mov.metros_utilizados}" min="0" class="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white" required>
+                                </div>
+                                <div class="md:col-span-2">
+                                    <label class="block text-sm font-medium mb-1">📝 Observação</label>
+                                    <textarea id="eObservacao" rows="2" class="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white">${mov.observacao || ''}</textarea>
+                                </div>
+                            </div>
+                            <div class="mt-4 p-3 bg-yellow-50 dark:bg-yellow-900/30 rounded-lg">
+                                <p class="text-sm text-yellow-700 dark:text-yellow-300">
+                                    ⚠️ <strong>Atenção:</strong> Alterar os metros vai corrigir o estoque da bobina automaticamente!
+                                </p>
+                            </div>
+                            <div class="flex gap-3 mt-6">
+                                <button type="submit" class="flex-1 bg-blue-500 text-white font-bold py-3 rounded-lg hover:bg-blue-600">💾 Salvar Alterações</button>
+                                <button type="button" onclick="cancelarEdicaoSaida()" class="flex-1 bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-white font-bold py-3 rounded-lg">Cancelar</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            `;
+        }
+
+        // ============================================
+        // FUNÇÕES DE EDIÇÃO DE SAÍDA
+        // ============================================
+        function editarSaida(id) {
+            saidaEditandoId = id;
+            showSaida();
+        }
+
+        function cancelarEdicaoSaida() {
+            saidaEditandoId = null;
+            showSaida();
+        }
+
+        async function salvarEdicaoSaida(event) {
+            event.preventDefault();
+            
+            const movId = parseInt(document.getElementById('editMovId').value);
+            const novaEquipe = document.getElementById('eEquipe').value;
+            const novoFuncionario = document.getElementById('eFuncionario').value;
+            const novaOrdem = document.getElementById('eOrdem').value;
+            const novosMetros = parseFloat(document.getElementById('eMetros').value);
+            const novaObs = document.getElementById('eObservacao').value;
+
+            if (!novaEquipe.trim()) {
+                alert('❌ Digite o nome da empresa!');
+                return;
+            }
+            if (!novoFuncionario.trim()) {
+                alert('❌ Digite o nome do técnico!');
+                return;
+            }
+            if (novosMetros < 0) {
+                alert('❌ Os metros não podem ser negativos!');
+                return;
+            }
+
+            const mov = movimentacoes.find(m => m.id === movId);
+            if (!mov) {
+                alert('❌ Movimentação não encontrada!');
+                return;
+            }
+
+            const bobina = bobinas.find(b => b.id === mov.bobina_id);
+            if (!bobina) {
+                alert('❌ Bobina não encontrada!');
+                return;
+            }
+
+            const diffMetros = novosMetros - mov.metros_utilizados;
+            const novosMetrosUsados = bobina.metros_usados + diffMetros;
+            const restante = bobina.metragem_inicial - novosMetrosUsados;
+
+            if (novosMetros > mov.metros_utilizados && diffMetros > 0) {
+                const disponivel = bobina.metragem_inicial - bobina.metros_usados + mov.metros_utilizados;
+                if (novosMetros > disponivel + mov.metros_utilizados) {
+                    alert(`❌ Não há metros disponíveis na bobina para esta alteração! Disponível: ${disponivel + mov.metros_utilizados}m`);
+                    return;
+                }
+            }
+
+            let novoStatus = bobina.status;
+            if (restante === 0) {
+                novoStatus = 'Finalizada';
+            } else if (novosMetrosUsados > 0) {
+                novoStatus = 'Em uso';
+            }
+
+            const sucessoBobina = await atualizarBobinaBD(bobina.id, {
+                metros_usados: novosMetrosUsados,
+                status: novoStatus
+            });
+
+            if (!sucessoBobina) {
+                alert('❌ Erro ao atualizar a bobina!');
+                return;
+            }
+
+            const sucessoMov = await atualizarMovimentacaoBD(movId, {
+                equipe: novaEquipe,
+                funcionario: novoFuncionario,
+                ordem_servico: novaOrdem || null,
+                metros_utilizados: novosMetros,
+                observacao: novaObs || null
+            });
+
+            if (!sucessoMov) {
+                alert('❌ Erro ao atualizar a movimentação!');
+                return;
+            }
+
+            bobina.metros_usados = novosMetrosUsados;
+            bobina.status = novoStatus;
+            
+            const indexMov = movimentacoes.findIndex(m => m.id === movId);
+            if (indexMov !== -1) {
+                movimentacoes[indexMov] = {
+                    ...movimentacoes[indexMov],
+                    equipe: novaEquipe,
+                    funcionario: novoFuncionario,
+                    ordem_servico: novaOrdem || null,
+                    metros_utilizados: novosMetros,
+                    observacao: novaObs || null
+                };
+            }
+
+            alert(`✅ Saída editada com sucesso!\n📏 Novos metros: ${novosMetros}m\n📦 Restante da bobina: ${restante}m`);
+
+            saidaEditandoId = null;
+            await carregarDados();
+            showSaida();
+        }
+
+        // ============================================
+        // FUNÇÃO PARA EXCLUIR SAÍDA
+        // ============================================
+        async function excluirSaida(id) {
+            if (!confirm('⚠️ Tem certeza que deseja excluir esta saída?\n\nIsso vai restaurar os metros na bobina!')) {
+                return;
+            }
+
+            const mov = movimentacoes.find(m => m.id === id);
+            if (!mov) {
+                alert('❌ Movimentação não encontrada!');
+                return;
+            }
+
+            const bobina = bobinas.find(b => b.id === mov.bobina_id);
+            if (!bobina) {
+                alert('❌ Bobina não encontrada!');
+                return;
+            }
+
+            const novosMetrosUsados = bobina.metros_usados - mov.metros_utilizados;
+            let novoStatus = bobina.status;
+            
+            if (novosMetrosUsados === 0 && bobina.metragem_inicial > 0) {
+                novoStatus = 'Nova';
+            } else if (novosMetrosUsados > 0) {
+                novoStatus = 'Em uso';
+            }
+
+            const sucessoBobina = await atualizarBobinaBD(bobina.id, {
+                metros_usados: novosMetrosUsados,
+                status: novoStatus
+            });
+
+            if (!sucessoBobina) {
+                alert('❌ Erro ao restaurar a bobina!');
+                return;
+            }
+
+            const sucessoMov = await excluirMovimentacaoBD(id);
+
+            if (!sucessoMov) {
+                alert('❌ Erro ao excluir movimentação!');
+                return;
+            }
+
+            bobina.metros_usados = novosMetrosUsados;
+            bobina.status = novoStatus;
+            movimentacoes = movimentacoes.filter(m => m.id !== id);
+
+            alert(`🗑️ Saída excluída com sucesso!\n📏 ${mov.metros_utilizados}m restaurados na bobina!`);
+
+            await carregarDados();
+            showSaida();
         }
 
         // ============================================
@@ -935,7 +1208,7 @@
             const sortedConsumoBobinas = Object.keys(consumoBobinas).sort((a, b) => consumoBobinas[b] - consumoBobinas[a]);
 
             const maxConsumo = Math.max(...Object.values(consumoBobinas), 1);
-            const graficoBobinas = sortedConsumoBobinas.slice(0, 10).map(nome => {
+            const graficoBobinasRel = sortedConsumoBobinas.slice(0, 10).map(nome => {
                 const valor = consumoBobinas[nome];
                 const percentual = (valor / maxConsumo * 100);
                 return `
@@ -1057,7 +1330,7 @@
                         </div>
                         <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow">
                             <h2 class="text-lg font-semibold text-gray-800 dark:text-white mb-4">📦 Consumo por Bobina</h2>
-                            ${Object.keys(consumoBobinas).length > 0 ? graficoBobinas : '<p class="text-center text-gray-500 dark:text-gray-400 py-4">Nenhum dado registrado.</p>'}
+                            ${Object.keys(consumoBobinas).length > 0 ? graficoBobinasRel : '<p class="text-center text-gray-500 dark:text-gray-400 py-4">Nenhum dado registrado.</p>'}
                         </div>
                     </div>
 
@@ -1322,7 +1595,7 @@
         }
 
         // ============================================
-        // INICIAR (CARREGAR DADOS DO BANCO)
+        // INICIAR
         // ============================================
         async function iniciarApp() {
             await carregarDados();
