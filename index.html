@@ -14,12 +14,9 @@
         // DADOS INICIAIS - 15 BOBINAS
         // ============================================
         let bobinas = [
-            // Bobinas existentes
             { id: 1, localizacao: 'Depósito A - Prateleira 1', fabricante: 'Corning', lote: 'LOT-001', tipo: 'SMF-28', capacidade: 24, metragemInicial: 2000, metrosUsados: 150, status: 'Em uso' },
             { id: 2, localizacao: 'Depósito B - Prateleira 3', fabricante: 'Prysmian', lote: 'LOT-002', tipo: 'G.652.D', capacidade: 48, metragemInicial: 3000, metrosUsados: 0, status: 'Nova' },
             { id: 3, localizacao: 'Depósito A - Prateleira 2', fabricante: 'Furukawa', lote: 'LOT-003', tipo: 'G.655', capacidade: 12, metragemInicial: 1500, metrosUsados: 1500, status: 'Finalizada' },
-            
-            // Novas bobinas adicionadas
             { id: 4, localizacao: 'Depósito C - Prateleira 1', fabricante: 'Corning', lote: 'LOT-004', tipo: 'SMF-28e', capacidade: 48, metragemInicial: 2500, metrosUsados: 0, status: 'Nova' },
             { id: 5, localizacao: 'Depósito A - Prateleira 4', fabricante: 'Prysmian', lote: 'LOT-005', tipo: 'G.657.A1', capacidade: 24, metragemInicial: 1800, metrosUsados: 300, status: 'Em uso' },
             { id: 6, localizacao: 'Depósito B - Prateleira 2', fabricante: 'Furukawa', lote: 'LOT-006', tipo: 'G.652.D', capacidade: 96, metragemInicial: 4000, metrosUsados: 250, status: 'Em uso' },
@@ -395,13 +392,13 @@
                             </div>
 
                             <div>
-                                <label class="block text-sm font-medium mb-1">📋 Ordem de Serviço *</label>
-                                <input type="text" id="sOrdem" placeholder="OS-001" class="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white" required>
+                                <label class="block text-sm font-medium mb-1">📋 Ordem de Serviço (opcional)</label>
+                                <input type="text" id="sOrdem" placeholder="OS-001 (opcional)" class="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white">
                             </div>
 
                             <div>
-                                <label class="block text-sm font-medium mb-1">📏 Metros Utilizados (m) *</label>
-                                <input type="number" id="sMetros" placeholder="0" min="1" class="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white" required>
+                                <label class="block text-sm font-medium mb-1">📏 Metros Utilizados (m) (opcional)</label>
+                                <input type="number" id="sMetros" placeholder="0 (opcional)" min="0" class="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white">
                             </div>
 
                             <div class="md:col-span-2">
@@ -442,7 +439,7 @@
                                                     <td class="px-4 py-2 font-bold text-orange-600">${m.metrosUtilizados}m</td>
                                                     <td class="px-4 py-2">${m.equipe}</td>
                                                     <td class="px-4 py-2">${m.funcionario}</td>
-                                                    <td class="px-4 py-2">${m.ordemServico}</td>
+                                                    <td class="px-4 py-2">${m.ordemServico || '-'}</td>
                                                 </tr>
                                             `;
                                         }).join('')}
@@ -465,7 +462,7 @@
             const equipe = document.getElementById('sEquipe').value;
             const funcionario = document.getElementById('sFuncionario').value;
             const ordem = document.getElementById('sOrdem').value;
-            const metros = parseFloat(document.getElementById('sMetros').value);
+            const metros = parseFloat(document.getElementById('sMetros').value) || 0;
             const obs = document.getElementById('sObservacao').value;
 
             if (!bobinaId) { 
@@ -483,23 +480,26 @@
                 return; 
             }
             
-            if (!ordem.trim()) { 
-                alert('❌ Digite a Ordem de Serviço!'); 
-                return; 
-            }
-            
             const bobina = bobinas.find(b => b.id === bobinaId);
             if (!bobina) { 
                 alert('❌ Bobina não encontrada!'); 
                 return; 
             }
 
-            if (!metros || metros <= 0) { 
-                alert('❌ Informe uma quantidade válida de metros!'); 
+            const disponivel = bobina.metragemInicial - bobina.metrosUsados;
+            
+            // Se metros for 0 ou não preenchido, perguntar se quer usar 0
+            if (metros === 0) {
+                if (!confirm(`⚠️ Você está registrando 0 metros para a bobina ${bobina.localizacao}.\n\nDeseja continuar?`)) {
+                    return;
+                }
+            }
+            
+            if (metros < 0) { 
+                alert('❌ Os metros não podem ser negativos!'); 
                 return; 
             }
 
-            const disponivel = bobina.metragemInicial - bobina.metrosUsados;
             if (metros > disponivel) { 
                 alert(`❌ Disponível: ${disponivel}m`); 
                 return; 
@@ -522,7 +522,7 @@
                 bobinaId: bobina.id,
                 equipe: equipe,
                 funcionario: funcionario,
-                ordemServico: ordem,
+                ordemServico: ordem || 'Não informado',
                 metrosUtilizados: metros,
                 observacao: obs,
                 data: now.toLocaleDateString('pt-BR'),
