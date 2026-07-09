@@ -21,9 +21,6 @@
         // ============================================
         const USUARIOS = {
             'admin@sgapm.com': { senha: 'admin123', nome: 'Administrador', tipo: 'admin' },
-            'usuario@sgapm.com': { senha: 'user123', nome: 'Usuário', tipo: 'usuario' },
-            'visitante@sgapm.com': { senha: 'visitante', nome: 'Visitante', tipo: 'visitante' },
-            // NOVOS USUÁRIOS
             'victor.ues@mixtel.com.br': { senha: '2580', nome: 'Victor Ues', tipo: 'usuario' },
             'rafael.silva@mixtel.com.br': { senha: '1234', nome: 'Rafael Silva', tipo: 'usuario' }
         };
@@ -228,7 +225,7 @@
         }
 
         // ============================================
-        // TELA DE LOGIN (COM BOTÃO VISITANTE)
+        // TELA DE LOGIN (SEM CREDENCIAIS VISÍVEIS)
         // ============================================
         function showLogin() {
             const user = getUsuarioLogado();
@@ -284,18 +281,7 @@
                             Acesse como visitante para visualizar o sistema sem fazer login
                         </p>
 
-                        <div class="mt-6 text-center">
-                            <p class="text-xs text-gray-400 dark:text-gray-500">
-                                👑 <strong>Admin:</strong> admin@sgapm.com / admin123
-                            </p>
-                            <p class="text-xs text-gray-400 dark:text-gray-500">
-                                👤 <strong>Victor:</strong> victor.ues@mixtel.com.br / 2580
-                            </p>
-                            <p class="text-xs text-gray-400 dark:text-gray-500">
-                                👤 <strong>Rafael:</strong> rafael.silva@mixtel.com.br / 1234
-                            </p>
-                        </div>
-                        <div class="mt-4 text-center text-xs text-gray-500">© 2026 SGAPM</div>
+                        <div class="mt-8 text-center text-xs text-gray-500">© 2026 SGAPM</div>
                     </div>
                 </div>
             `;
@@ -325,7 +311,7 @@
             if (fazerLogin(email, senha)) {
                 showDashboard();
             } else {
-                alert('❌ E-mail ou senha inválidos!\n\n📌 Use:\n- admin@sgapm.com / admin123\n- victor.ues@mixtel.com.br / 2580\n- rafael.silva@mixtel.com.br / 1234');
+                alert('❌ E-mail ou senha inválidos!');
             }
         }
 
