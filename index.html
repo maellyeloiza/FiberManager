@@ -1,3 +1,340 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SGAPM</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script>
+        // ============================================
+        // CONFIGURAÇÃO DO SUPABASE
+        // ============================================
+        const SUPABASE_URL = 'https://dibarwapqintkjvifkbm.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_Mm5CXywYX1pW7dbsqRyRFQ_gc-0jkcb';
+
+        // ============================================
+        // USUÁRIOS LIBERADOS
+        // ============================================
+        const USUARIOS = {
+            'admin@sgapm.com': { senha: 'admin123', nome: 'Administrador', tipo: 'admin' },
+            'victor.ues@mixtel.com.br': { senha: '2580', nome: 'Victor Ues', tipo: 'usuario' },
+            'rafael.silva@mixtel.com.br': { senha: '1234', nome: 'Rafael Silva', tipo: 'usuario' }
+        };
+
+        // ============================================
+        // DADOS GLOBAIS
+        // ============================================
+        let bobinas = [];
+        let movimentacoes = [];
+        let proximoId = 1;
+        let filtroBusca = '';
+        let usuarioAtual = null;
+        let saidaEditandoId = null;
+
+        // ============================================
+        // FUNÇÕES DO SUPABASE
+        // ============================================
+        async function carregarDados() {
+            try {
+                const responseBobinas = await fetch(`${SUPABASE_URL}/rest/v1/bobinas?select=*&order=id.asc`, {
+                    headers: {
+                        'apikey': SUPABASE_KEY,
+                        'Authorization': `Bearer ${SUPABASE_KEY}`
+                    }
+                });
+                bobinas = await responseBobinas.json();
+                
+                const responseMov = await fetch(`${SUPABASE_URL}/rest/v1/movimentacoes?select=*&order=id.asc`, {
+                    headers: {
+                        'apikey': SUPABASE_KEY,
+                        'Authorization': `Bearer ${SUPABASE_KEY}`
+                    }
+                });
+                movimentacoes = await responseMov.json();
+                
+                if (bobinas.length > 0) {
+                    proximoId = Math.max(...bobinas.map(b => b.id)) + 1;
+                }
+                
+                console.log('✅ Dados carregados:', bobinas.length, 'bobinas,', movimentacoes.length, 'movimentações');
+            } catch (error) {
+                console.error('❌ Erro ao carregar dados:', error);
+            }
+        }
+
+        async function salvarBobinaBD(bobina) {
+            try {
+                const response = await fetch(`${SUPABASE_URL}/rest/v1/bobinas`, {
+                    method: 'POST',
+                    headers: {
+                        'apikey': SUPABASE_KEY,
+                        'Authorization': `Bearer ${SUPABASE_KEY}`,
+                        'Content-Type': 'application/json',
+                        'Prefer': 'return=representation'
+                    },
+                    body: JSON.stringify(bobina)
+                });
+                const data = await response.json();
+                return data[0];
+            } catch (error) {
+                console.error('❌ Erro ao salvar bobina:', error);
+                return null;
+            }
+        }
+
+        async function atualizarBobinaBD(id, dados) {
+            try {
+                const response = await fetch(`${SUPABASE_URL}/rest/v1/bobinas?id=eq.${id}`, {
+                    method: 'PATCH',
+                    headers: {
+                        'apikey': SUPABASE_KEY,
+                        'Authorization': `Bearer ${SUPABASE_KEY}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(dados)
+                });
+                return response.ok;
+            } catch (error) {
+                console.error('❌ Erro ao atualizar bobina:', error);
+                return false;
+            }
+        }
+
+        async function excluirBobinaBD(id) {
+            try {
+                const response = await fetch(`${SUPABASE_URL}/rest/v1/bobinas?id=eq.${id}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'apikey': SUPABASE_KEY,
+                        'Authorization': `Bearer ${SUPABASE_KEY}`
+                    }
+                });
+                return response.ok;
+            } catch (error) {
+                console.error('❌ Erro ao excluir bobina:', error);
+                return false;
+            }
+        }
+
+        async function salvarMovimentacaoBD(mov) {
+            try {
+                const response = await fetch(`${SUPABASE_URL}/rest/v1/movimentacoes`, {
+                    method: 'POST',
+                    headers: {
+                        'apikey': SUPABASE_KEY,
+                        'Authorization': `Bearer ${SUPABASE_KEY}`,
+                        'Content-Type': 'application/json',
+                        'Prefer': 'return=representation'
+                    },
+                    body: JSON.stringify(mov)
+                });
+                const data = await response.json();
+                return data[0];
+            } catch (error) {
+                console.error('❌ Erro ao salvar movimentação:', error);
+                return null;
+            }
+        }
+
+        async function atualizarMovimentacaoBD(id, dados) {
+            try {
+                const response = await fetch(`${SUPABASE_URL}/rest/v1/movimentacoes?id=eq.${id}`, {
+                    method: 'PATCH',
+                    headers: {
+                        'apikey': SUPABASE_KEY,
+                        'Authorization': `Bearer ${SUPABASE_KEY}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(dados)
+                });
+                return response.ok;
+            } catch (error) {
+                console.error('❌ Erro ao atualizar movimentação:', error);
+                return false;
+            }
+        }
+
+        async function excluirMovimentacaoBD(id) {
+            try {
+                const response = await fetch(`${SUPABASE_URL}/rest/v1/movimentacoes?id=eq.${id}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'apikey': SUPABASE_KEY,
+                        'Authorization': `Bearer ${SUPABASE_KEY}`
+                    }
+                });
+                return response.ok;
+            } catch (error) {
+                console.error('❌ Erro ao excluir movimentação:', error);
+                return false;
+            }
+        }
+
+        // ============================================
+        // FUNÇÕES DE AUTENTICAÇÃO
+        // ============================================
+        function fazerLogin(email, senha) {
+            const usuario = USUARIOS[email];
+            if (usuario && usuario.senha === senha) {
+                usuarioAtual = { email, ...usuario };
+                localStorage.setItem('@SGAPM:usuario', JSON.stringify(usuarioAtual));
+                return true;
+            }
+            return false;
+        }
+
+        function getUsuarioLogado() {
+            if (usuarioAtual) return usuarioAtual;
+            const saved = localStorage.getItem('@SGAPM:usuario');
+            if (saved) {
+                usuarioAtual = JSON.parse(saved);
+                return usuarioAtual;
+            }
+            return null;
+        }
+
+        function logout() {
+            if (confirm('Deseja realmente sair?')) {
+                localStorage.removeItem('@SGAPM:usuario');
+                usuarioAtual = null;
+                showLogin();
+            }
+        }
+
+        function isAdmin() {
+            const user = getUsuarioLogado();
+            return user && user.tipo === 'admin';
+        }
+
+        function isUsuario() {
+            const user = getUsuarioLogado();
+            return user && (user.tipo === 'admin' || user.tipo === 'usuario');
+        }
+
+        function isVisitante() {
+            const user = getUsuarioLogado();
+            return user && user.tipo === 'visitante';
+        }
+
+        function podeAlterar() {
+            return isUsuario() || isAdmin();
+        }
+
+        // ============================================
+        // TELA DE LOGIN (COM BOTÃO CALCULADORA)
+        // ============================================
+        function showLogin() {
+            const user = getUsuarioLogado();
+            if (user) {
+                showDashboard();
+                return;
+            }
+
+            document.getElementById('root').innerHTML = `
+                <div class="min-h-screen bg-gradient-to-br from-indigo-50 to-blue-50 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center p-4">
+                    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md p-8">
+                        <div class="flex justify-end">
+                            <button onclick="toggleDarkMode()" class="text-2xl">🌙</button>
+                        </div>
+                        <div class="text-center mb-8">
+                            <div class="text-6xl mb-3">📋</div>
+                            <h1 class="text-4xl font-bold bg-gradient-to-r from-indigo-600 to-blue-600 bg-clip-text text-transparent">
+                                SGAPM
+                            </h1>
+                            <p class="text-gray-500 dark:text-gray-400 mt-2 text-sm">
+                                Sistema de Gerenciamento Área de Projetos e Manutenção
+                            </p>
+                        </div>
+
+                        <!-- Formulário de Login -->
+                        <form onsubmit="handleLogin(event)" class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">📧 E-mail</label>
+                                <input type="email" id="email" placeholder="seu@email.com" class="w-full px-4 py-3 border rounded-lg dark:bg-gray-700 dark:text-white" required>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">🔒 Senha</label>
+                                <input type="password" id="senha" placeholder="••••••••" class="w-full px-4 py-3 border rounded-lg dark:bg-gray-700 dark:text-white" required>
+                            </div>
+                            <button type="submit" class="w-full bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white font-bold py-3 rounded-lg transition shadow-lg">
+                                Entrar
+                            </button>
+                        </form>
+
+                        <!-- DIVISOR -->
+                        <div class="relative my-6">
+                            <div class="absolute inset-0 flex items-center">
+                                <div class="w-full border-t border-gray-300 dark:border-gray-600"></div>
+                            </div>
+                            <div class="relative flex justify-center text-sm">
+                                <span class="px-2 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400">ou</span>
+                            </div>
+                        </div>
+
+                        <!-- BOTÃO VISITANTE -->
+                        <button onclick="entrarComoVisitante()" class="w-full bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-white font-bold py-3 rounded-lg transition shadow-lg flex items-center justify-center gap-2">
+                            👀 Área do Visitante
+                        </button>
+                        <p class="text-xs text-center text-gray-500 dark:text-gray-400 mt-1">
+                            Acesse como visitante para visualizar o sistema sem fazer login
+                        </p>
+
+                        <!-- DIVISOR -->
+                        <div class="relative my-6">
+                            <div class="absolute inset-0 flex items-center">
+                                <div class="w-full border-t border-gray-300 dark:border-gray-600"></div>
+                            </div>
+                            <div class="relative flex justify-center text-sm">
+                                <span class="px-2 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400">ferramenta</span>
+                            </div>
+                        </div>
+
+                        <!-- BOTÃO CALCULADORA -->
+                        <button onclick="showCalculadoraLogin()" class="w-full bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-3 rounded-lg transition shadow-lg flex items-center justify-center gap-2">
+                            📐 Calculadora de Enlace Óptico
+                        </button>
+                        <p class="text-xs text-center text-gray-500 dark:text-gray-400 mt-1">
+                            Calcule a potência de enlace sem precisar fazer login
+                        </p>
+
+                        <div class="mt-8 text-center text-xs text-gray-500">© 2026 SGAPM</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // ============================================
+        // FUNÇÃO PARA ENTRAR COMO VISITANTE
+        // ============================================
+        function entrarComoVisitante() {
+            usuarioAtual = {
+                email: 'visitante@sgapm.com',
+                nome: 'Visitante',
+                tipo: 'visitante'
+            };
+            localStorage.setItem('@SGAPM:usuario', JSON.stringify(usuarioAtual));
+            showDashboard();
+        }
+
+        // ============================================
+        // FUNÇÃO DE LOGIN
+        // ============================================
+        function handleLogin(event) {
+            event.preventDefault();
+            const email = document.getElementById('email').value;
+            const senha = document.getElementById('senha').value;
+            
+            if (fazerLogin(email, senha)) {
+                showDashboard();
+            } else {
+                alert('❌ E-mail ou senha inválidos!');
+            }
+        }
+
         // ============================================
         // CALCULADORA DE POTÊNCIA DE ENLACE ÓPTICO (TELA COMPLETA - SEM LOGIN)
         // ============================================
@@ -225,3 +562,1324 @@
 
             document.getElementById('resultadoCalculadoraLogin').classList.remove('hidden');
         }
+
+        // ============================================
+        // TELA DE DASHBOARD (COM BOTÃO CALCULADORA)
+        // ============================================
+        function showDashboard() {
+            const user = getUsuarioLogado();
+            if (!user) { showLogin(); return; }
+
+            const totalBobinas = bobinas.length;
+            const totalMetros = bobinas.reduce((t, b) => t + (b.metragem_inicial - b.metros_usados), 0);
+            const totalConsumido = bobinas.reduce((t, b) => t + b.metros_usados, 0);
+            const alerta = bobinas.filter(b => (b.metragem_inicial - b.metros_usados) < 1500 && (b.metragem_inicial - b.metros_usados) > 0).length;
+            const consumoDia = movimentacoes.filter(m => m.data === new Date().toLocaleDateString('pt-BR')).reduce((t, m) => t + m.metros_utilizados, 0);
+
+            const graficoBobinas = bobinas.map(b => {
+                const restante = b.metragem_inicial - b.metros_usados;
+                const percentual = b.metragem_inicial > 0 ? (restante / b.metragem_inicial * 100) : 0;
+                const cor = percentual > 50 ? 'bg-green-500' : percentual > 25 ? 'bg-yellow-500' : 'bg-red-500';
+                return `
+                    <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow hover:shadow-lg transition-shadow">
+                        <div class="flex justify-between items-start mb-2">
+                            <div>
+                                <p class="font-semibold text-gray-800 dark:text-white text-sm">${b.fabricante}</p>
+                                <p class="text-xs text-gray-500 dark:text-gray-400">${b.lote} - ${b.tipo}</p>
+                            </div>
+                            <span class="text-xs px-2 py-1 rounded-full ${b.status === 'Nova' ? 'bg-green-100 text-green-700' : b.status === 'Em uso' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700'}">${b.status}</span>
+                        </div>
+                        <div class="mt-2">
+                            <div class="flex justify-between text-xs text-gray-600 dark:text-gray-400 mb-1">
+                                <span>${restante}m disponíveis</span>
+                                <span>${b.metros_usados}m usados</span>
+                            </div>
+                            <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3 overflow-hidden">
+                                <div class="${cor} h-3 rounded-full transition-all duration-500" style="width: ${percentual}%"></div>
+                            </div>
+                            <div class="flex justify-between text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                <span>${b.metragem_inicial}m total</span>
+                                <span>${percentual.toFixed(0)}% disponível</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            const podeAlterar = !isVisitante();
+
+            document.getElementById('root').innerHTML = `
+                <div class="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 md:p-6">
+                    <div class="flex flex-wrap justify-between items-center mb-6">
+                        <div>
+                            <h1 class="text-2xl font-bold text-gray-800 dark:text-white">📊 Dashboard</h1>
+                            <p class="text-gray-500 dark:text-gray-400">Bem-vindo, <strong>${user.nome}</strong>! ${isVisitante() ? '👀 (Modo Visualização)' : ''}</p>
+                        </div>
+                        <div class="flex flex-wrap gap-2 mt-3 md:mt-0">
+                            <button onclick="showBobinas()" class="px-4 py-2 bg-green-500 text-white rounded-lg text-sm hover:bg-green-600">📦 Bobinas</button>
+                            ${podeAlterar ? `<button onclick="showSaida()" class="px-4 py-2 bg-orange-500 text-white rounded-lg text-sm hover:bg-orange-600">📤 Registrar Saída</button>` : ''}
+                            <button onclick="showRelatorios()" class="px-4 py-2 bg-purple-500 text-white rounded-lg text-sm hover:bg-purple-600">📊 Relatórios</button>
+                            <button onclick="showCalculadoraLogin()" class="px-4 py-2 bg-yellow-500 text-white rounded-lg text-sm hover:bg-yellow-600">📐 Calculadora</button>
+                            <button onclick="toggleDarkMode()" class="px-4 py-2 bg-gray-300 dark:bg-gray-700 rounded-lg text-sm">🌙</button>
+                            <button onclick="logout()" class="px-4 py-2 bg-red-500 text-white rounded-lg text-sm hover:bg-red-600">Sair</button>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+                        <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow border-l-4 border-blue-500">
+                            <p class="text-sm text-gray-500 dark:text-gray-400">📦 Total Bobinas</p>
+                            <p class="text-2xl font-bold text-gray-800 dark:text-white">${totalBobinas}</p>
+                        </div>
+                        <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow border-l-4 border-green-500">
+                            <p class="text-sm text-gray-500 dark:text-gray-400">📏 Metragem Total</p>
+                            <p class="text-2xl font-bold text-gray-800 dark:text-white">${totalMetros}m</p>
+                        </div>
+                        <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow border-l-4 border-orange-500">
+                            <p class="text-sm text-gray-500 dark:text-gray-400">📉 Total Consumido</p>
+                            <p class="text-2xl font-bold text-orange-600">${totalConsumido}m</p>
+                        </div>
+                        <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow border-l-4 border-purple-500">
+                            <p class="text-sm text-gray-500 dark:text-gray-400">📋 Movimentações</p>
+                            <p class="text-2xl font-bold text-gray-800 dark:text-white">${movimentacoes.length}</p>
+                        </div>
+                        <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow border-l-4 border-red-500">
+                            <p class="text-sm text-gray-500 dark:text-gray-400">⚠️ Estoque Baixo</p>
+                            <p class="text-2xl font-bold text-red-500">${alerta}</p>
+                        </div>
+                    </div>
+
+                    <div class="mb-6">
+                        <h2 class="text-lg font-semibold text-gray-800 dark:text-white mb-4">📊 Status de Cada Bobina</h2>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                            ${bobinas.length > 0 ? graficoBobinas : '<p class="text-center text-gray-500 dark:text-gray-400 py-8 col-span-full">Nenhuma bobina cadastrada.</p>'}
+                        </div>
+                    </div>
+
+                    <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow">
+                        <h2 class="text-lg font-semibold text-gray-800 dark:text-white mb-4">📋 Últimas Movimentações</h2>
+                        ${movimentacoes.length === 0 ? '<p class="text-center text-gray-500 dark:text-gray-400 py-4">Nenhuma movimentação registrada.</p>' : 
+                            movimentacoes.slice(-5).reverse().map(m => {
+                                const bobina = bobinas.find(b => b.id === m.bobina_id);
+                                const nomeBobina = bobina ? `${bobina.fabricante} - ${bobina.lote} - ${bobina.tipo}` : '#' + m.bobina_id;
+                                return `
+                                    <div class="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-700 rounded-lg mb-2 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
+                                        <div>
+                                            <span class="font-medium text-gray-800 dark:text-white">${nomeBobina}</span>
+                                            <span class="text-sm text-gray-500 dark:text-gray-400 ml-2">${m.equipe}</span>
+                                        </div>
+                                        <div class="text-right">
+                                            <span class="font-bold text-orange-600">-${m.metros_utilizados}m</span>
+                                            <span class="text-xs text-gray-500 dark:text-gray-400 block">${m.data}</span>
+                                        </div>
+                                    </div>
+                                `;
+                            }).join('')
+                        }
+                    </div>
+                    <div class="mt-4 text-center text-xs text-gray-500">© 2026 SGAPM</div>
+                </div>
+            `;
+        }
+
+        // ============================================
+        // TELA DE BOBINAS
+        // ============================================
+        function showBobinas() {
+            const user = getUsuarioLogado();
+            if (!user) { showLogin(); return; }
+
+            const podeAlterar = !isVisitante();
+
+            let lista = bobinas;
+            if (filtroBusca.trim()) {
+                const termo = filtroBusca.toLowerCase();
+                lista = bobinas.filter(b => 
+                    b.id.toString().includes(termo) ||
+                    b.localizacao.toLowerCase().includes(termo) ||
+                    b.fabricante.toLowerCase().includes(termo) ||
+                    b.lote.toLowerCase().includes(termo) ||
+                    b.tipo.toLowerCase().includes(termo) ||
+                    b.status.toLowerCase().includes(termo)
+                );
+            }
+
+            document.getElementById('root').innerHTML = `
+                <div class="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 md:p-6">
+                    <div class="flex flex-wrap justify-between items-center mb-6">
+                        <div>
+                            <h1 class="text-2xl font-bold text-gray-800 dark:text-white">📦 Bobinas</h1>
+                            <p class="text-gray-500 dark:text-gray-400">${lista.length} bobina(s) encontrada(s)</p>
+                        </div>
+                        <div class="flex flex-wrap gap-2 mt-3 md:mt-0">
+                            ${podeAlterar ? `<button onclick="showFormBobina()" class="px-4 py-2 bg-blue-500 text-white rounded-lg text-sm hover:bg-blue-600">➕ Nova</button>` : ''}
+                            <button onclick="showDashboard()" class="px-4 py-2 bg-gray-500 text-white rounded-lg text-sm hover:bg-gray-600">← Voltar</button>
+                            <button onclick="toggleDarkMode()" class="px-4 py-2 bg-gray-300 dark:bg-gray-700 rounded-lg text-sm">🌙</button>
+                        </div>
+                    </div>
+
+                    <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow mb-6">
+                        <div class="flex gap-3">
+                            <div class="flex-1 relative">
+                                <span class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">🔍</span>
+                                <input type="text" id="buscaInput" value="${filtroBusca}" oninput="filtrarBobinas(this.value)" placeholder="Buscar..." class="w-full pl-10 pr-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white">
+                            </div>
+                            <button onclick="limparBusca()" class="px-4 py-2 bg-gray-300 dark:bg-gray-600 rounded-lg">Limpar</button>
+                        </div>
+                    </div>
+
+                    <div class="bg-white dark:bg-gray-800 rounded-xl shadow overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead class="bg-gray-50 dark:bg-gray-700">
+                                <tr>
+                                    <th class="px-4 py-2 text-left">ID</th>
+                                    <th class="px-4 py-2 text-left">Localização</th>
+                                    <th class="px-4 py-2 text-left">Fabricante</th>
+                                    <th class="px-4 py-2 text-left">Lote</th>
+                                    <th class="px-4 py-2 text-left">Tipo</th>
+                                    <th class="px-4 py-2 text-left">Capacidade</th>
+                                    <th class="px-4 py-2 text-left">Inicial</th>
+                                    <th class="px-4 py-2 text-left">Usados</th>
+                                    <th class="px-4 py-2 text-left">Restante</th>
+                                    <th class="px-4 py-2 text-left">Status</th>
+                                    ${podeAlterar ? '<th class="px-4 py-2 text-left">Ações</th>' : ''}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${lista.length === 0 ? `
+                                    <tr><td colspan="${podeAlterar ? 11 : 10}" class="text-center py-8 text-gray-500">Nenhuma bobina encontrada</td></tr>
+                                ` : lista.map(b => `
+                                    <tr class="border-b dark:border-gray-700">
+                                        <td class="px-4 py-2 font-medium">#${b.id}</td>
+                                        <td class="px-4 py-2">${b.localizacao}</td>
+                                        <td class="px-4 py-2">${b.fabricante}</td>
+                                        <td class="px-4 py-2">${b.lote}</td>
+                                        <td class="px-4 py-2">${b.tipo}</td>
+                                        <td class="px-4 py-2">${b.capacidade} FO</td>
+                                        <td class="px-4 py-2">${b.metragem_inicial}m</td>
+                                        <td class="px-4 py-2">${b.metros_usados}m</td>
+                                        <td class="px-4 py-2">${b.metragem_inicial - b.metros_usados}m</td>
+                                        <td class="px-4 py-2">
+                                            <span class="px-2 py-1 rounded-full text-xs ${b.status === 'Nova' ? 'bg-green-100 text-green-700' : b.status === 'Em uso' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700'}">${b.status}</span>
+                                        </td>
+                                        ${podeAlterar ? `
+                                        <td class="px-4 py-2">
+                                            <button onclick="editarBobina(${b.id})" class="text-blue-600 mr-2">✏️</button>
+                                            <button onclick="excluirBobina(${b.id})" class="text-red-600">🗑️</button>
+                                        </td>` : ''}
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="mt-4 grid grid-cols-5 gap-2 text-center">
+                        <div class="bg-white dark:bg-gray-800 rounded-lg p-2"><p class="text-xs text-gray-500">Total</p><p class="font-bold">${bobinas.length}</p></div>
+                        <div class="bg-white dark:bg-gray-800 rounded-lg p-2"><p class="text-xs text-gray-500">Novas</p><p class="font-bold text-green-600">${bobinas.filter(b => b.status === 'Nova').length}</p></div>
+                        <div class="bg-white dark:bg-gray-800 rounded-lg p-2"><p class="text-xs text-gray-500">Em Uso</p><p class="font-bold text-blue-600">${bobinas.filter(b => b.status === 'Em uso').length}</p></div>
+                        <div class="bg-white dark:bg-gray-800 rounded-lg p-2"><p class="text-xs text-gray-500">Finalizadas</p><p class="font-bold text-gray-600">${bobinas.filter(b => b.status === 'Finalizada').length}</p></div>
+                        <div class="bg-white dark:bg-gray-800 rounded-lg p-2"><p class="text-xs text-gray-500">Filtradas</p><p class="font-bold text-orange-600">${lista.length}</p></div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // ============================================
+        // FORMULÁRIO DE BOBINA
+        // ============================================
+        function showFormBobina(id = null) {
+            if (!podeAlterar()) {
+                alert('❌ Visitante não pode cadastrar bobinas!');
+                showBobinas();
+                return;
+            }
+
+            const editando = id !== null;
+            const b = editando ? bobinas.find(x => x.id === id) : null;
+            if (editando && !b) { alert('Bobina não encontrada!'); showBobinas(); return; }
+
+            const titulo = editando ? '✏️ Editar' : '➕ Nova Bobina';
+            const botao = editando ? 'Atualizar' : 'Cadastrar';
+
+            document.getElementById('root').innerHTML = `
+                <div class="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 md:p-6 flex items-center justify-center">
+                    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-2xl p-8">
+                        <div class="flex justify-between items-center mb-6">
+                            <h2 class="text-2xl font-bold text-gray-800 dark:text-white">${titulo}</h2>
+                            <button onclick="showBobinas()" class="text-2xl text-gray-500">✕</button>
+                        </div>
+                        <form onsubmit="salvarBobina(event)">
+                            <input type="hidden" id="editId" value="${editando ? id : ''}">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div class="md:col-span-2">
+                                    <label class="block text-sm font-medium mb-1">📍 Localização</label>
+                                    <input type="text" id="fLocalizacao" value="${editando ? b.localizacao : ''}" class="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white" required>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">🏭 Fabricante</label>
+                                    <input type="text" id="fFabricante" value="${editando ? b.fabricante : ''}" class="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white" required>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">📦 Lote</label>
+                                    <input type="text" id="fLote" value="${editando ? b.lote : ''}" class="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white" required>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">🔷 Tipo</label>
+                                    <input type="text" id="fTipo" value="${editando ? b.tipo : ''}" class="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white" required>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">📊 Capacidade (FO)</label>
+                                    <input type="number" id="fCapacidade" value="${editando ? b.capacidade : ''}" class="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white" required>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">📏 Metragem Inicial (m)</label>
+                                    <input type="number" id="fMetragemInicial" value="${editando ? b.metragem_inicial : ''}" class="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white" required>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">📉 Metros Usados (m)</label>
+                                    <input type="number" id="fMetrosUsados" value="${editando ? b.metros_usados : ''}" class="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white" required>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">📌 Status</label>
+                                    <select id="fStatus" class="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white">
+                                        <option value="Nova" ${editando && b.status === 'Nova' ? 'selected' : ''}>Nova</option>
+                                        <option value="Em uso" ${editando && b.status === 'Em uso' ? 'selected' : ''}>Em uso</option>
+                                        <option value="Finalizada" ${editando && b.status === 'Finalizada' ? 'selected' : ''}>Finalizada</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="mt-4 p-3 bg-gray-100 dark:bg-gray-700 rounded-lg">
+                                <p class="text-sm">📊 <strong>Metragem Restante:</strong> <span class="text-blue-600 font-bold">${editando ? b.metragem_inicial - b.metros_usados : 0}m</span></p>
+                            </div>
+                            <div class="flex gap-3 mt-6">
+                                <button type="submit" class="flex-1 bg-blue-500 text-white font-bold py-3 rounded-lg hover:bg-blue-600">${botao}</button>
+                                <button type="button" onclick="showBobinas()" class="flex-1 bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-white font-bold py-3 rounded-lg">Cancelar</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            `;
+        }
+
+        // ============================================
+        // FUNÇÕES CRUD BOBINAS
+        // ============================================
+        async function salvarBobina(event) {
+            event.preventDefault();
+            
+            if (!podeAlterar()) {
+                alert('❌ Visitante não pode cadastrar bobinas!');
+                showBobinas();
+                return;
+            }
+
+            const id = document.getElementById('editId').value;
+            const localizacao = document.getElementById('fLocalizacao').value;
+            const fabricante = document.getElementById('fFabricante').value;
+            const lote = document.getElementById('fLote').value;
+            const tipo = document.getElementById('fTipo').value;
+            const capacidade = parseFloat(document.getElementById('fCapacidade').value);
+            const metragemInicial = parseFloat(document.getElementById('fMetragemInicial').value);
+            const metrosUsados = parseFloat(document.getElementById('fMetrosUsados').value);
+            const status = document.getElementById('fStatus').value;
+
+            if (metrosUsados > metragemInicial) {
+                alert('❌ Metros usados não podem ser maiores que a metragem inicial!');
+                return;
+            }
+
+            const dados = {
+                localizacao,
+                fabricante,
+                lote,
+                tipo,
+                capacidade,
+                metragem_inicial: metragemInicial,
+                metros_usados: metrosUsados,
+                status
+            };
+
+            if (id) {
+                const sucesso = await atualizarBobinaBD(parseInt(id), dados);
+                if (sucesso) {
+                    const index = bobinas.findIndex(b => b.id === parseInt(id));
+                    if (index !== -1) {
+                        bobinas[index] = { ...bobinas[index], ...dados };
+                    }
+                    alert('✅ Bobina atualizada!');
+                } else {
+                    alert('❌ Erro ao atualizar bobina!');
+                }
+            } else {
+                const nova = await salvarBobinaBD(dados);
+                if (nova) {
+                    bobinas.push(nova);
+                    proximoId = Math.max(...bobinas.map(b => b.id)) + 1;
+                    alert('✅ Bobina cadastrada!');
+                } else {
+                    alert('❌ Erro ao cadastrar bobina!');
+                }
+            }
+            showBobinas();
+        }
+
+        async function editarBobina(id) { 
+            if (!podeAlterar()) {
+                alert('❌ Visitante não pode editar bobinas!');
+                return;
+            }
+            showFormBobina(id); 
+        }
+
+        async function excluirBobina(id) {
+            if (!podeAlterar()) {
+                alert('❌ Visitante não pode excluir bobinas!');
+                return;
+            }
+
+            if (confirm('⚠️ Tem certeza?')) {
+                const sucesso = await excluirBobinaBD(id);
+                if (sucesso) {
+                    bobinas = bobinas.filter(b => b.id !== id);
+                    alert('🗑️ Bobina excluída!');
+                } else {
+                    alert('❌ Erro ao excluir bobina!');
+                }
+                showBobinas();
+            }
+        }
+
+        function filtrarBobinas(termo) {
+            filtroBusca = termo;
+            showBobinas();
+        }
+
+        function limparBusca() {
+            filtroBusca = '';
+            document.getElementById('buscaInput').value = '';
+            showBobinas();
+        }
+
+        // ============================================
+        // TELA DE SAÍDA (COM EDIÇÃO)
+        // ============================================
+        function showSaida() {
+            if (!podeAlterar()) {
+                alert('❌ Visitante não pode registrar saídas!');
+                showDashboard();
+                return;
+            }
+
+            if (saidaEditandoId) {
+                showFormEditarSaida(saidaEditandoId);
+                return;
+            }
+
+            const disponiveis = bobinas.filter(b => (b.metragem_inicial - b.metros_usados) > 0);
+
+            document.getElementById('root').innerHTML = `
+                <div class="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 md:p-6">
+                    <div class="flex flex-wrap justify-between items-center mb-6">
+                        <div>
+                            <h1 class="text-2xl font-bold text-gray-800 dark:text-white">📤 Registrar Saída</h1>
+                            <p class="text-gray-500 dark:text-gray-400">Registre o consumo de metros das bobinas</p>
+                        </div>
+                        <div class="flex gap-2 mt-3 md:mt-0">
+                            <button onclick="showDashboard()" class="px-4 py-2 bg-gray-500 text-white rounded-lg text-sm hover:bg-gray-600">← Voltar</button>
+                            <button onclick="toggleDarkMode()" class="px-4 py-2 bg-gray-300 dark:bg-gray-700 rounded-lg text-sm">🌙</button>
+                        </div>
+                    </div>
+
+                    <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow mb-6">
+                        <h2 class="text-lg font-semibold mb-4">📝 Nova Saída</h2>
+                        <form onsubmit="registrarSaida(event)" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="md:col-span-2">
+                                <label class="block text-sm font-medium mb-1">Selecione a Bobina *</label>
+                                <select id="sBobinaId" class="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white" required>
+                                    <option value="">Selecione uma bobina...</option>
+                                    ${disponiveis.map(b => `
+                                        <option value="${b.id}">${b.fabricante} - ${b.lote} - ${b.tipo} (${b.metragem_inicial - b.metros_usados}m disponíveis)</option>
+                                    `).join('')}
+                                </select>
+                                ${disponiveis.length === 0 ? '<p class="text-red-500 text-sm mt-1">⚠️ Nenhuma bobina disponível!</p>' : ''}
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium mb-1">🏢 Empresa *</label>
+                                <input type="text" id="sEquipe" placeholder="Digite o nome da empresa" class="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white" required>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium mb-1">👤 Técnico *</label>
+                                <input type="text" id="sFuncionario" placeholder="Nome do técnico" class="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white" required>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium mb-1">📋 Ordem de Serviço (opcional)</label>
+                                <input type="text" id="sOrdem" placeholder="OS-001 (opcional)" class="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white">
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium mb-1">📏 Metros Utilizados (m) (opcional)</label>
+                                <input type="number" id="sMetros" placeholder="0 (opcional)" min="0" class="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white">
+                            </div>
+
+                            <div class="md:col-span-2">
+                                <label class="block text-sm font-medium mb-1">📝 Observação</label>
+                                <textarea id="sObservacao" rows="2" placeholder="Informações adicionais..." class="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white"></textarea>
+                            </div>
+
+                            <div class="md:col-span-2 flex gap-3">
+                                <button type="submit" class="flex-1 bg-orange-500 text-white font-bold py-3 rounded-lg hover:bg-orange-600" ${disponiveis.length === 0 ? 'disabled' : ''}>✅ Registrar Saída</button>
+                                <button type="reset" class="flex-1 bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-white font-bold py-3 rounded-lg">Limpar</button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow">
+                        <h2 class="text-lg font-semibold mb-4">📋 Histórico de Saídas</h2>
+                        ${movimentacoes.length === 0 ? '<p class="text-center text-gray-500 py-4">Nenhuma saída registrada.</p>' : `
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-sm">
+                                    <thead class="bg-gray-50 dark:bg-gray-700">
+                                        <tr>
+                                            <th class="px-4 py-2 text-left">Data</th>
+                                            <th class="px-4 py-2 text-left">Bobina</th>
+                                            <th class="px-4 py-2 text-left">Metros</th>
+                                            <th class="px-4 py-2 text-left">Empresa</th>
+                                            <th class="px-4 py-2 text-left">Técnico</th>
+                                            <th class="px-4 py-2 text-left">OS</th>
+                                            <th class="px-4 py-2 text-left">Ações</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${movimentacoes.slice().reverse().map(m => {
+                                            const bobina = bobinas.find(b => b.id === m.bobina_id);
+                                            const nomeBobina = bobina ? `${bobina.fabricante} - ${bobina.lote} - ${bobina.tipo}` : '#' + m.bobina_id;
+                                            return `
+                                                <tr class="border-b dark:border-gray-700">
+                                                    <td class="px-4 py-2">${m.data}</td>
+                                                    <td class="px-4 py-2 font-medium">${nomeBobina}</td>
+                                                    <td class="px-4 py-2 font-bold text-orange-600">${m.metros_utilizados}m</td>
+                                                    <td class="px-4 py-2">${m.equipe}</td>
+                                                    <td class="px-4 py-2">${m.funcionario}</td>
+                                                    <td class="px-4 py-2">${m.ordem_servico || '-'}</td>
+                                                    <td class="px-4 py-2">
+                                                        <button onclick="editarSaida(${m.id})" class="text-blue-600 hover:text-blue-800 mr-2" title="Editar saída">✏️</button>
+                                                        <button onclick="excluirSaida(${m.id})" class="text-red-600 hover:text-red-800" title="Excluir saída">🗑️</button>
+                                                    </td>
+                                                </tr>
+                                            `;
+                                        }).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        `}
+                    </div>
+                </div>
+            `;
+        }
+
+        // ============================================
+        // FUNÇÃO PARA REGISTRAR SAÍDA
+        // ============================================
+        async function registrarSaida(event) {
+            event.preventDefault();
+            
+            if (!podeAlterar()) {
+                alert('❌ Visitante não pode registrar saídas!');
+                showDashboard();
+                return;
+            }
+
+            const bobinaId = parseInt(document.getElementById('sBobinaId').value);
+            const equipe = document.getElementById('sEquipe').value;
+            const funcionario = document.getElementById('sFuncionario').value;
+            const ordem = document.getElementById('sOrdem').value;
+            const metros = parseFloat(document.getElementById('sMetros').value) || 0;
+            const obs = document.getElementById('sObservacao').value;
+
+            if (!bobinaId) { 
+                alert('❌ Selecione uma bobina!'); 
+                return; 
+            }
+            
+            if (!equipe.trim()) { 
+                alert('❌ Digite o nome da empresa!'); 
+                return; 
+            }
+            
+            if (!funcionario.trim()) { 
+                alert('❌ Digite o nome do técnico!'); 
+                return; 
+            }
+            
+            const bobina = bobinas.find(b => b.id === bobinaId);
+            if (!bobina) { 
+                alert('❌ Bobina não encontrada!'); 
+                return; 
+            }
+
+            const disponivel = bobina.metragem_inicial - bobina.metros_usados;
+            
+            if (metros === 0) {
+                if (!confirm(`⚠️ Você está registrando 0 metros para a bobina ${bobina.fabricante} - ${bobina.lote} - ${bobina.tipo}.\n\nDeseja continuar?`)) {
+                    return;
+                }
+            }
+            
+            if (metros < 0) { 
+                alert('❌ Os metros não podem ser negativos!'); 
+                return; 
+            }
+
+            if (metros > disponivel) { 
+                alert(`❌ Disponível: ${disponivel}m`); 
+                return; 
+            }
+
+            const novosMetrosUsados = bobina.metros_usados + metros;
+            let novoStatus = bobina.status;
+            const restante = bobina.metragem_inicial - novosMetrosUsados;
+            
+            if (restante === 0) {
+                novoStatus = 'Finalizada';
+            } else if (novosMetrosUsados > 0) {
+                novoStatus = 'Em uso';
+            }
+
+            const sucesso = await atualizarBobinaBD(bobinaId, {
+                metros_usados: novosMetrosUsados,
+                status: novoStatus
+            });
+
+            if (!sucesso) {
+                alert('❌ Erro ao atualizar bobina!');
+                return;
+            }
+
+            bobina.metros_usados = novosMetrosUsados;
+            bobina.status = novoStatus;
+
+            const now = new Date();
+            const mov = {
+                bobina_id: bobinaId,
+                equipe: equipe,
+                funcionario: funcionario,
+                ordem_servico: ordem || null,
+                metros_utilizados: metros,
+                observacao: obs || null,
+                data: now.toLocaleDateString('pt-BR'),
+                hora: now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+            };
+
+            const novaMov = await salvarMovimentacaoBD(mov);
+            if (novaMov) {
+                movimentacoes.push(novaMov);
+                console.log('✅ Movimentação salva:', novaMov);
+            } else {
+                console.error('❌ Erro ao salvar movimentação!');
+                alert('❌ Erro ao salvar movimentação!');
+                return;
+            }
+
+            alert(`✅ Saída registrada!\n📏 ${metros}m utilizados\n📦 Restante: ${restante}m`);
+            
+            document.getElementById('sBobinaId').value = '';
+            document.getElementById('sEquipe').value = '';
+            document.getElementById('sFuncionario').value = '';
+            document.getElementById('sOrdem').value = '';
+            document.getElementById('sMetros').value = '';
+            document.getElementById('sObservacao').value = '';
+            
+            await carregarDados();
+            showDashboard();
+        }
+
+        // ============================================
+        // FORMULÁRIO DE EDIÇÃO DE SAÍDA
+        // ============================================
+        function showFormEditarSaida(id) {
+            const mov = movimentacoes.find(m => m.id === id);
+            if (!mov) {
+                alert('❌ Movimentação não encontrada!');
+                saidaEditandoId = null;
+                showSaida();
+                return;
+            }
+
+            const bobina = bobinas.find(b => b.id === mov.bobina_id);
+            const nomeBobina = bobina ? `${bobina.fabricante} - ${bobina.lote} - ${bobina.tipo}` : '#' + mov.bobina_id;
+
+            document.getElementById('root').innerHTML = `
+                <div class="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 md:p-6 flex items-center justify-center">
+                    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-2xl p-8">
+                        <div class="flex justify-between items-center mb-6">
+                            <h2 class="text-2xl font-bold text-gray-800 dark:text-white">✏️ Editar Saída</h2>
+                            <button onclick="cancelarEdicaoSaida()" class="text-2xl text-gray-500">✕</button>
+                        </div>
+                        <div class="mb-4 p-3 bg-gray-100 dark:bg-gray-700 rounded-lg">
+                            <p class="text-sm text-gray-600 dark:text-gray-300">
+                                <strong>Bobina:</strong> ${nomeBobina}
+                            </p>
+                            <p class="text-sm text-gray-600 dark:text-gray-300">
+                                <strong>Data:</strong> ${mov.data} ${mov.hora}
+                            </p>
+                            <p class="text-sm text-gray-600 dark:text-gray-300">
+                                <strong>Metros lançados:</strong> <span class="font-bold text-orange-600">${mov.metros_utilizados}m</span>
+                            </p>
+                        </div>
+                        <form onsubmit="salvarEdicaoSaida(event)">
+                            <input type="hidden" id="editMovId" value="${mov.id}">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">🏢 Empresa *</label>
+                                    <input type="text" id="eEquipe" value="${mov.equipe}" class="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white" required>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">👤 Técnico *</label>
+                                    <input type="text" id="eFuncionario" value="${mov.funcionario}" class="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white" required>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">📋 Ordem de Serviço</label>
+                                    <input type="text" id="eOrdem" value="${mov.ordem_servico || ''}" class="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">📏 Metros Utilizados (m) *</label>
+                                    <input type="number" id="eMetros" value="${mov.metros_utilizados}" min="0" class="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white" required>
+                                </div>
+                                <div class="md:col-span-2">
+                                    <label class="block text-sm font-medium mb-1">📝 Observação</label>
+                                    <textarea id="eObservacao" rows="2" class="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white">${mov.observacao || ''}</textarea>
+                                </div>
+                            </div>
+                            <div class="mt-4 p-3 bg-yellow-50 dark:bg-yellow-900/30 rounded-lg">
+                                <p class="text-sm text-yellow-700 dark:text-yellow-300">
+                                    ⚠️ <strong>Atenção:</strong> Alterar os metros vai corrigir o estoque da bobina automaticamente!
+                                </p>
+                            </div>
+                            <div class="flex gap-3 mt-6">
+                                <button type="submit" class="flex-1 bg-blue-500 text-white font-bold py-3 rounded-lg hover:bg-blue-600">💾 Salvar Alterações</button>
+                                <button type="button" onclick="cancelarEdicaoSaida()" class="flex-1 bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-white font-bold py-3 rounded-lg">Cancelar</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            `;
+        }
+
+        // ============================================
+        // FUNÇÕES DE EDIÇÃO DE SAÍDA
+        // ============================================
+        function editarSaida(id) {
+            saidaEditandoId = id;
+            showSaida();
+        }
+
+        function cancelarEdicaoSaida() {
+            saidaEditandoId = null;
+            showSaida();
+        }
+
+        async function salvarEdicaoSaida(event) {
+            event.preventDefault();
+            
+            const movId = parseInt(document.getElementById('editMovId').value);
+            const novaEquipe = document.getElementById('eEquipe').value;
+            const novoFuncionario = document.getElementById('eFuncionario').value;
+            const novaOrdem = document.getElementById('eOrdem').value;
+            const novosMetros = parseFloat(document.getElementById('eMetros').value);
+            const novaObs = document.getElementById('eObservacao').value;
+
+            if (!novaEquipe.trim()) {
+                alert('❌ Digite o nome da empresa!');
+                return;
+            }
+            if (!novoFuncionario.trim()) {
+                alert('❌ Digite o nome do técnico!');
+                return;
+            }
+            if (novosMetros < 0) {
+                alert('❌ Os metros não podem ser negativos!');
+                return;
+            }
+
+            const mov = movimentacoes.find(m => m.id === movId);
+            if (!mov) {
+                alert('❌ Movimentação não encontrada!');
+                return;
+            }
+
+            const bobina = bobinas.find(b => b.id === mov.bobina_id);
+            if (!bobina) {
+                alert('❌ Bobina não encontrada!');
+                return;
+            }
+
+            const diffMetros = novosMetros - mov.metros_utilizados;
+            const novosMetrosUsados = bobina.metros_usados + diffMetros;
+            const restante = bobina.metragem_inicial - novosMetrosUsados;
+
+            if (novosMetros > mov.metros_utilizados && diffMetros > 0) {
+                const disponivel = bobina.metragem_inicial - bobina.metros_usados + mov.metros_utilizados;
+                if (novosMetros > disponivel + mov.metros_utilizados) {
+                    alert(`❌ Não há metros disponíveis na bobina para esta alteração! Disponível: ${disponivel + mov.metros_utilizados}m`);
+                    return;
+                }
+            }
+
+            let novoStatus = bobina.status;
+            if (restante === 0) {
+                novoStatus = 'Finalizada';
+            } else if (novosMetrosUsados > 0) {
+                novoStatus = 'Em uso';
+            }
+
+            const sucessoBobina = await atualizarBobinaBD(bobina.id, {
+                metros_usados: novosMetrosUsados,
+                status: novoStatus
+            });
+
+            if (!sucessoBobina) {
+                alert('❌ Erro ao atualizar a bobina!');
+                return;
+            }
+
+            const sucessoMov = await atualizarMovimentacaoBD(movId, {
+                equipe: novaEquipe,
+                funcionario: novoFuncionario,
+                ordem_servico: novaOrdem || null,
+                metros_utilizados: novosMetros,
+                observacao: novaObs || null
+            });
+
+            if (!sucessoMov) {
+                alert('❌ Erro ao atualizar a movimentação!');
+                return;
+            }
+
+            bobina.metros_usados = novosMetrosUsados;
+            bobina.status = novoStatus;
+            
+            const indexMov = movimentacoes.findIndex(m => m.id === movId);
+            if (indexMov !== -1) {
+                movimentacoes[indexMov] = {
+                    ...movimentacoes[indexMov],
+                    equipe: novaEquipe,
+                    funcionario: novoFuncionario,
+                    ordem_servico: novaOrdem || null,
+                    metros_utilizados: novosMetros,
+                    observacao: novaObs || null
+                };
+            }
+
+            alert(`✅ Saída editada com sucesso!\n📏 Novos metros: ${novosMetros}m\n📦 Restante da bobina: ${restante}m`);
+
+            saidaEditandoId = null;
+            await carregarDados();
+            showSaida();
+        }
+
+        // ============================================
+        // FUNÇÃO PARA EXCLUIR SAÍDA
+        // ============================================
+        async function excluirSaida(id) {
+            if (!confirm('⚠️ Tem certeza que deseja excluir esta saída?\n\nIsso vai restaurar os metros na bobina!')) {
+                return;
+            }
+
+            const mov = movimentacoes.find(m => m.id === id);
+            if (!mov) {
+                alert('❌ Movimentação não encontrada!');
+                return;
+            }
+
+            const bobina = bobinas.find(b => b.id === mov.bobina_id);
+            if (!bobina) {
+                alert('❌ Bobina não encontrada!');
+                return;
+            }
+
+            const novosMetrosUsados = bobina.metros_usados - mov.metros_utilizados;
+            let novoStatus = bobina.status;
+            
+            if (novosMetrosUsados === 0 && bobina.metragem_inicial > 0) {
+                novoStatus = 'Nova';
+            } else if (novosMetrosUsados > 0) {
+                novoStatus = 'Em uso';
+            }
+
+            const sucessoBobina = await atualizarBobinaBD(bobina.id, {
+                metros_usados: novosMetrosUsados,
+                status: novoStatus
+            });
+
+            if (!sucessoBobina) {
+                alert('❌ Erro ao restaurar a bobina!');
+                return;
+            }
+
+            const sucessoMov = await excluirMovimentacaoBD(id);
+
+            if (!sucessoMov) {
+                alert('❌ Erro ao excluir movimentação!');
+                return;
+            }
+
+            bobina.metros_usados = novosMetrosUsados;
+            bobina.status = novoStatus;
+            movimentacoes = movimentacoes.filter(m => m.id !== id);
+
+            alert(`🗑️ Saída excluída com sucesso!\n📏 ${mov.metros_utilizados}m restaurados na bobina!`);
+
+            await carregarDados();
+            showSaida();
+        }
+
+        // ============================================
+        // TELA DE RELATÓRIOS
+        // ============================================
+        function showRelatorios() {
+            const user = getUsuarioLogado();
+            if (!user) { showLogin(); return; }
+
+            const totalBobinas = bobinas.length;
+            const totalMetros = bobinas.reduce((t, b) => t + (b.metragem_inicial - b.metros_usados), 0);
+            const totalConsumido = bobinas.reduce((t, b) => t + b.metros_usados, 0);
+            
+            const empresas = {};
+            movimentacoes.forEach(m => {
+                if (empresas[m.equipe]) {
+                    empresas[m.equipe] += m.metros_utilizados;
+                } else {
+                    empresas[m.equipe] = m.metros_utilizados;
+                }
+            });
+            
+            const tecnicos = {};
+            movimentacoes.forEach(m => {
+                if (tecnicos[m.funcionario]) {
+                    tecnicos[m.funcionario] += m.metros_utilizados;
+                } else {
+                    tecnicos[m.funcionario] = m.metros_utilizados;
+                }
+            });
+            
+            const consumoBobinas = {};
+            movimentacoes.forEach(m => {
+                const bobina = bobinas.find(b => b.id === m.bobina_id);
+                const nomeBobina = bobina ? `${bobina.fabricante} - ${bobina.lote} - ${bobina.tipo}` : '#' + m.bobina_id;
+                if (consumoBobinas[nomeBobina]) {
+                    consumoBobinas[nomeBobina] += m.metros_utilizados;
+                } else {
+                    consumoBobinas[nomeBobina] = m.metros_utilizados;
+                }
+            });
+            
+            const estoqueBaixo = bobinas.filter(b => (b.metragem_inicial - b.metros_usados) < 1500 && (b.metragem_inicial - b.metros_usados) > 0);
+            
+            const statusNova = bobinas.filter(b => b.status === 'Nova').length;
+            const statusEmUso = bobinas.filter(b => b.status === 'Em uso').length;
+            const statusFinalizada = bobinas.filter(b => b.status === 'Finalizada').length;
+
+            const sortedConsumoBobinas = Object.keys(consumoBobinas).sort((a, b) => consumoBobinas[b] - consumoBobinas[a]);
+
+            const maxConsumo = Math.max(...Object.values(consumoBobinas), 1);
+            const graficoBobinasRel = sortedConsumoBobinas.slice(0, 10).map(nome => {
+                const valor = consumoBobinas[nome];
+                const percentual = (valor / maxConsumo * 100);
+                return `
+                    <div class="mb-2">
+                        <div class="flex justify-between text-sm">
+                            <span class="text-gray-600 dark:text-gray-400 truncate max-w-[60%]">${nome}</span>
+                            <span class="font-bold text-gray-800 dark:text-white">${valor}m</span>
+                        </div>
+                        <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3 mt-1">
+                            <div class="bg-purple-500 h-3 rounded-full" style="width: ${percentual}%"></div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            const listaEstoqueBaixo = estoqueBaixo.map(b => `
+                <div class="flex justify-between items-center p-2 bg-red-50 dark:bg-red-900/30 rounded-lg mb-1">
+                    <span class="text-sm font-medium text-gray-800 dark:text-white">${b.fabricante} - ${b.lote} - ${b.tipo}</span>
+                    <span class="text-sm font-bold text-red-600">${b.metragem_inicial - b.metros_usados}m</span>
+                </div>
+            `).join('');
+
+            const listaEmpresas = Object.keys(empresas).sort((a, b) => empresas[b] - empresas[a]).map(empresa => `
+                <div class="flex justify-between items-center p-2 bg-gray-50 dark:bg-gray-700 rounded-lg mb-1">
+                    <span class="text-sm font-medium text-gray-800 dark:text-white">${empresa}</span>
+                    <span class="text-sm font-bold text-blue-600">${empresas[empresa]}m</span>
+                </div>
+            `).join('');
+
+            const listaTecnicos = Object.keys(tecnicos).sort((a, b) => tecnicos[b] - tecnicos[a]).map(tecnico => `
+                <div class="flex justify-between items-center p-2 bg-gray-50 dark:bg-gray-700 rounded-lg mb-1">
+                    <span class="text-sm font-medium text-gray-800 dark:text-white">${tecnico}</span>
+                    <span class="text-sm font-bold text-green-600">${tecnicos[tecnico]}m</span>
+                </div>
+            `).join('');
+
+            document.getElementById('root').innerHTML = `
+                <div class="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 md:p-6">
+                    <div class="flex flex-wrap justify-between items-center mb-6">
+                        <div>
+                            <h1 class="text-2xl md:text-3xl font-bold text-gray-800 dark:text-white">📊 Relatórios</h1>
+                            <p class="text-gray-500 dark:text-gray-400">Análise completa do seu estoque - SGAPM</p>
+                        </div>
+                        <div class="flex flex-wrap gap-2 mt-3 md:mt-0">
+                            <button onclick="exportarExcel()" class="px-4 py-2 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700">📥 Excel</button>
+                            <button onclick="exportarPDF()" class="px-4 py-2 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700">📄 PDF</button>
+                            <button onclick="showDashboard()" class="px-4 py-2 bg-gray-500 text-white rounded-lg text-sm hover:bg-gray-600">← Voltar</button>
+                            <button onclick="toggleDarkMode()" class="px-4 py-2 bg-gray-300 dark:bg-gray-700 rounded-lg text-sm">🌙</button>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                        <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow">
+                            <p class="text-sm text-gray-500 dark:text-gray-400">📦 Total Bobinas</p>
+                            <p class="text-2xl font-bold text-gray-800 dark:text-white">${totalBobinas}</p>
+                        </div>
+                        <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow">
+                            <p class="text-sm text-gray-500 dark:text-gray-400">📏 Metros Disponíveis</p>
+                            <p class="text-2xl font-bold text-gray-800 dark:text-white">${totalMetros}m</p>
+                        </div>
+                        <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow">
+                            <p class="text-sm text-gray-500 dark:text-gray-400">📉 Total Consumido</p>
+                            <p class="text-2xl font-bold text-orange-600">${totalConsumido}m</p>
+                        </div>
+                        <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow">
+                            <p class="text-sm text-gray-500 dark:text-gray-400">📋 Movimentações</p>
+                            <p class="text-2xl font-bold text-gray-800 dark:text-white">${movimentacoes.length}</p>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                        <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow">
+                            <h2 class="text-lg font-semibold text-gray-800 dark:text-white mb-4">📌 Status das Bobinas</h2>
+                            <div class="space-y-3">
+                                <div>
+                                    <div class="flex justify-between text-sm">
+                                        <span class="text-gray-600 dark:text-gray-400">🟢 Nova</span>
+                                        <span class="font-bold text-gray-800 dark:text-white">${statusNova}</span>
+                                    </div>
+                                    <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5 mt-1">
+                                        <div class="bg-green-500 h-2.5 rounded-full" style="width: ${totalBobinas > 0 ? (statusNova / totalBobinas * 100) : 0}%"></div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <div class="flex justify-between text-sm">
+                                        <span class="text-gray-600 dark:text-gray-400">🔵 Em uso</span>
+                                        <span class="font-bold text-gray-800 dark:text-white">${statusEmUso}</span>
+                                    </div>
+                                    <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5 mt-1">
+                                        <div class="bg-blue-500 h-2.5 rounded-full" style="width: ${totalBobinas > 0 ? (statusEmUso / totalBobinas * 100) : 0}%"></div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <div class="flex justify-between text-sm">
+                                        <span class="text-gray-600 dark:text-gray-400">⚪ Finalizada</span>
+                                        <span class="font-bold text-gray-800 dark:text-white">${statusFinalizada}</span>
+                                    </div>
+                                    <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5 mt-1">
+                                        <div class="bg-gray-500 h-2.5 rounded-full" style="width: ${totalBobinas > 0 ? (statusFinalizada / totalBobinas * 100) : 0}%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow">
+                            <h2 class="text-lg font-semibold text-gray-800 dark:text-white mb-4">⚠️ Estoque Baixo (&lt; 1500m)</h2>
+                            ${estoqueBaixo.length > 0 ? listaEstoqueBaixo : '<p class="text-center text-gray-500 dark:text-gray-400 py-4">✅ Nenhuma bobina com estoque baixo!</p>'}
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                        <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow">
+                            <h2 class="text-lg font-semibold text-gray-800 dark:text-white mb-4">🏢 Consumo por Empresa</h2>
+                            ${Object.keys(empresas).length > 0 ? listaEmpresas : '<p class="text-center text-gray-500 dark:text-gray-400 py-4">Nenhum dado registrado.</p>'}
+                        </div>
+                        <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow">
+                            <h2 class="text-lg font-semibold text-gray-800 dark:text-white mb-4">👤 Consumo por Técnico</h2>
+                            ${Object.keys(tecnicos).length > 0 ? listaTecnicos : '<p class="text-center text-gray-500 dark:text-gray-400 py-4">Nenhum dado registrado.</p>'}
+                        </div>
+                        <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow">
+                            <h2 class="text-lg font-semibold text-gray-800 dark:text-white mb-4">📦 Consumo por Bobina</h2>
+                            ${Object.keys(consumoBobinas).length > 0 ? graficoBobinasRel : '<p class="text-center text-gray-500 dark:text-gray-400 py-4">Nenhum dado registrado.</p>'}
+                        </div>
+                    </div>
+
+                    <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow">
+                        <h2 class="text-lg font-semibold text-gray-800 dark:text-white mb-4">📋 Todas as Movimentações</h2>
+                        ${movimentacoes.length === 0 ? '<p class="text-center text-gray-500 dark:text-gray-400 py-4">Nenhuma movimentação registrada.</p>' : `
+                            <div class="overflow-x-auto max-h-64 overflow-y-auto">
+                                <table class="w-full text-sm">
+                                    <thead class="bg-gray-50 dark:bg-gray-700 sticky top-0">
+                                        <tr>
+                                            <th class="px-4 py-2 text-left">Data</th>
+                                            <th class="px-4 py-2 text-left">Bobina</th>
+                                            <th class="px-4 py-2 text-left">Metros</th>
+                                            <th class="px-4 py-2 text-left">Empresa</th>
+                                            <th class="px-4 py-2 text-left">Técnico</th>
+                                            <th class="px-4 py-2 text-left">OS</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${movimentacoes.slice().reverse().map(m => {
+                                            const bobina = bobinas.find(b => b.id === m.bobina_id);
+                                            const nomeBobina = bobina ? `${bobina.fabricante} - ${bobina.lote} - ${bobina.tipo}` : '#' + m.bobina_id;
+                                            return `
+                                                <tr class="border-b dark:border-gray-700">
+                                                    <td class="px-4 py-2">${m.data}</td>
+                                                    <td class="px-4 py-2 font-medium">${nomeBobina}</td>
+                                                    <td class="px-4 py-2 font-bold text-orange-600">${m.metros_utilizados}m</td>
+                                                    <td class="px-4 py-2">${m.equipe}</td>
+                                                    <td class="px-4 py-2">${m.funcionario}</td>
+                                                    <td class="px-4 py-2">${m.ordem_servico || '-'}</td>
+                                                </tr>
+                                            `;
+                                        }).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        `}
+                    </div>
+                </div>
+            `;
+        }
+
+        // ============================================
+        // EXPORTAÇÃO EXCEL
+        // ============================================
+        function exportarExcel() {
+            if (movimentacoes.length === 0) {
+                alert('❌ Não há dados para exportar!');
+                return;
+            }
+
+            let html = `
+            <html xmlns:o="urn:schemas-microsoft-com:office:office" 
+                  xmlns:x="urn:schemas-microsoft-com:office:excel" 
+                  xmlns="http://www.w3.org/TR/REC-html40">
+            <head>
+                <meta charset="UTF-8">
+                <!--[if gte mso 9]>
+                <xml>
+                    <x:ExcelWorkbook>
+                        <x:ExcelWorksheets>
+                            <x:ExcelWorksheet>
+                                <x:Name>Relatório</x:Name>
+                                <x:WorksheetOptions>
+                                    <x:DisplayGridlines/>
+                                </x:WorksheetOptions>
+                            </x:ExcelWorksheet>
+                        </x:ExcelWorksheets>
+                    </x:ExcelWorkbook>
+                </xml>
+                <![endif]-->
+                <style>
+                    table { border-collapse: collapse; width: 100%; }
+                    th { background-color: #4F46E5; color: white; padding: 8px; border: 1px solid #000; }
+                    td { padding: 8px; border: 1px solid #ccc; }
+                </style>
+            </head>
+            <body>
+                <h2>📋 SGAPM - Relatório de Movimentações</h2>
+                <p>Gerado em: ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')}</p>
+                <br>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Data</th>
+                            <th>Bobina</th>
+                            <th>Metros</th>
+                            <th>Empresa</th>
+                            <th>Técnico</th>
+                            <th>OS</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            movimentacoes.forEach(m => {
+                const bobina = bobinas.find(b => b.id === m.bobina_id);
+                const nomeBobina = bobina ? `${bobina.fabricante} - ${bobina.lote} - ${bobina.tipo}` : '#' + m.bobina_id;
+                html += `
+                        <tr>
+                            <td>${m.data}</td>
+                            <td>${nomeBobina}</td>
+                            <td>${m.metros_utilizados}</td>
+                            <td>${m.equipe}</td>
+                            <td>${m.funcionario}</td>
+                            <td>${m.ordem_servico || '-'}</td>
+                        </tr>
+                `;
+            });
+
+            html += `
+                    </tbody>
+                </table>
+                <br>
+                <p><strong>Resumo:</strong></p>
+                <ul>
+                    <li>Total de Movimentações: ${movimentacoes.length}</li>
+                    <li>Total de Metros Consumidos: ${movimentacoes.reduce((t, m) => t + m.metros_utilizados, 0)}m</li>
+                </ul>
+                <p style="text-align: center; margin-top: 20px; font-size: 12px; color: #999;">© 2026 SGAPM - Sistema de Gerenciamento Área de Projetos e Manutenção</p>
+            </body>
+            </html>
+            `;
+
+            const blob = new Blob([html], { type: 'application/vnd.ms-excel;charset=utf-8' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `relatorio_sgapm_${new Date().toLocaleDateString('pt-BR').replace(/\//g, '-')}.xls`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            alert('✅ Relatório exportado com sucesso!');
+        }
+
+        // ============================================
+        // EXPORTAÇÃO PDF
+        // ============================================
+        function exportarPDF() {
+            if (movimentacoes.length === 0) {
+                alert('❌ Não há dados para exportar!');
+                return;
+            }
+
+            let html = `
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <title>Relatório SGAPM</title>
+                <style>
+                    body { font-family: Arial, sans-serif; margin: 40px; color: #333; }
+                    .header { text-align: center; border-bottom: 3px solid #4F46E5; padding-bottom: 20px; margin-bottom: 30px; }
+                    .header h1 { color: #4F46E5; font-size: 28px; margin: 0; }
+                    .header p { color: #666; font-size: 14px; margin: 5px 0 0 0; }
+                    .info-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 30px; }
+                    .info-card { background: #f8f9fa; padding: 15px; border-radius: 8px; text-align: center; border: 1px solid #e9ecef; }
+                    .info-card .label { font-size: 12px; color: #666; margin-bottom: 5px; }
+                    .info-card .value { font-size: 20px; font-weight: bold; color: #1a1a2e; }
+                    .info-card .value.orange { color: #f97316; }
+                    .info-card .value.green { color: #22c55e; }
+                    .info-card .value.red { color: #ef4444; }
+                    .section-title { font-size: 18px; font-weight: bold; color: #1a1a2e; border-bottom: 2px solid #e9ecef; padding-bottom: 10px; margin-top: 30px; margin-bottom: 15px; }
+                    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+                    th { background: #4F46E5; color: white; padding: 10px 12px; text-align: left; }
+                    td { padding: 8px 12px; border-bottom: 1px solid #e9ecef; }
+                    tr:nth-child(even) { background: #f8f9fa; }
+                    .footer { text-align: center; color: #999; font-size: 12px; margin-top: 40px; padding-top: 20px; border-top: 1px solid #e9ecef; }
+                    .alert-box { background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 15px; margin-top: 15px; }
+                    .alert-box .alert-item { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #fecaca; }
+                    .alert-box .alert-item:last-child { border-bottom: none; }
+                    .alert-box .alert-item .metros { font-weight: bold; color: #dc2626; }
+                    @media print { body { margin: 20px; } .no-print { display: none; } }
+                </style>
+            </head>
+            <body>
+                <div class="header">
+                    <h1>📋 SGAPM</h1>
+                    <p>Relatório de Movimentações</p>
+                    <p style="font-size: 12px; color: #999;">Gerado em: ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')}</p>
+                </div>
+            `;
+
+            const totalBobinas = bobinas.length;
+            const totalMetros = bobinas.reduce((t, b) => t + (b.metragem_inicial - b.metros_usados), 0);
+            const totalConsumido = bobinas.reduce((t, b) => t + b.metros_usados, 0);
+            
+            html += `
+                <div class="info-grid">
+                    <div class="info-card"><div class="label">📦 Total Bobinas</div><div class="value">${totalBobinas}</div></div>
+                    <div class="info-card"><div class="label">📏 Metros Disponíveis</div><div class="value green">${totalMetros}m</div></div>
+                    <div class="info-card"><div class="label">📉 Total Consumido</div><div class="value orange">${totalConsumido}m</div></div>
+                    <div class="info-card"><div class="label">📋 Movimentações</div><div class="value">${movimentacoes.length}</div></div>
+                </div>
+            `;
+
+            const estoqueBaixo = bobinas.filter(b => (b.metragem_inicial - b.metros_usados) < 1500 && (b.metragem_inicial - b.metros_usados) > 0);
+            if (estoqueBaixo.length > 0) {
+                html += `
+                    <div class="section-title">⚠️ Estoque Baixo (&lt; 1500m)</div>
+                    <div class="alert-box">
+                        ${estoqueBaixo.map(b => `
+                            <div class="alert-item">
+                                <span>${b.fabricante} - ${b.lote} - ${b.tipo}</span>
+                                <span class="metros">${b.metragem_inicial - b.metros_usados}m</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            }
+
+            html += `
+                <div class="section-title">📋 Movimentações</div>
+                <table>
+                    <thead><tr><th>Data</th><th>Bobina</th><th>Metros</th><th>Empresa</th><th>Técnico</th><th>OS</th></tr></thead>
+                    <tbody>
+            `;
+
+            movimentacoes.slice().reverse().forEach(m => {
+                const bobina = bobinas.find(b => b.id === m.bobina_id);
+                const nomeBobina = bobina ? `${bobina.fabricante} - ${bobina.lote} - ${bobina.tipo}` : '#' + m.bobina_id;
+                html += `
+                    <tr>
+                        <td>${m.data}</td>
+                        <td>${nomeBobina}</td>
+                        <td><strong>${m.metros_utilizados}m</strong></td>
+                        <td>${m.equipe}</td>
+                        <td>${m.funcionario}</td>
+                        <td>${m.ordem_servico || '-'}</td>
+                    </tr>
+                `;
+            });
+
+            html += `
+                    </tbody>
+                </table>
+                <div class="footer">
+                    <p>© 2026 SGAPM - Sistema de Gerenciamento Área de Projetos e Manutenção</p>
+                    <p>Este relatório foi gerado automaticamente pelo sistema.</p>
+                </div>
+                <div style="text-align: center; margin-top: 20px;">
+                    <button onclick="window.print()" style="padding: 10px 30px; background: #4F46E5; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer;">🖨️ Imprimir / Salvar como PDF</button>
+                    <button onclick="window.close()" style="padding: 10px 30px; background: #6b7280; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; margin-left: 10px;">✕ Fechar</button>
+                </div>
+            </body>
+            </html>
+            `;
+
+            const win = window.open('', '_blank', 'width=1000,height=800');
+            win.document.write(html);
+            win.document.close();
+            win.focus();
+            
+            setTimeout(() => {
+                alert('✅ Relatório PDF aberto!\n\n📌 Clique em "Imprimir" para salvar como PDF.');
+            }, 500);
+        }
+
+        // ============================================
+        // FUNÇÕES GLOBAIS
+        // ============================================
+        function toggleDarkMode() {
+            document.documentElement.classList.toggle('dark');
+        }
+
+        // ============================================
+        // INICIAR (CARREGAR DADOS DO BANCO)
+        // ============================================
+        async function iniciarApp() {
+            await carregarDados();
+            showLogin();
+        }
+        
+        iniciarApp();
+    </script>
+</body>
+</html>
