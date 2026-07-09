@@ -555,4 +555,174 @@
 
                 <div>
                   <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">📏 Metros Utilizados (m) *</label>
-                  <input type
+                  <input type="number" id="metrosUtilizados" placeholder="0" min="1" class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white" required />
+                </div>
+
+                <div class="md:col-span-2">
+                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">📝 Observação</label>
+                  <textarea id="observacao" rows="2" placeholder="Informações adicionais..." class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white"></textarea>
+                </div>
+
+                <div class="md:col-span-2 flex gap-3">
+                  <button type="submit" class="flex-1 bg-orange-500 hover:bg-orange-600 text-white font-semibold py-3 rounded-lg transition" ${bobinasDisponiveis.length === 0 ? 'disabled' : ''}>
+                    ✅ Registrar Saída
+                  </button>
+                  <button type="reset" class="flex-1 bg-gray-300 hover:bg-gray-400 dark:bg-gray-600 dark:hover:bg-gray-700 text-gray-700 dark:text-white font-semibold py-3 rounded-lg transition">
+                    Limpar
+                  </button>
+                </div>
+              </form>
+            </div>
+
+            <!-- Histórico -->
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
+              <h2 class="text-lg font-semibold text-gray-800 dark:text-white mb-4">📋 Histórico de Saídas</h2>
+              ${movimentacoes.length > 0 ? `
+                <div class="overflow-x-auto">
+                  <table class="w-full">
+                    <thead class="bg-gray-50 dark:bg-gray-700">
+                      <tr>
+                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Data/Hora</th>
+                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Bobina</th>
+                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Metros</th>
+                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Cliente</th>
+                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Funcionário</th>
+                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Equipe</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      ${movimentacoes.slice().reverse().map(m => `
+                        <tr class="border-b dark:border-gray-700">
+                          <td class="px-4 py-2 text-sm text-gray-600 dark:text-gray-300">${m.data} ${m.hora}</td>
+                          <td class="px-4 py-2 text-sm font-medium text-gray-800 dark:text-white">#${m.bobinaId}</td>
+                          <td class="px-4 py-2 text-sm font-bold text-orange-600">${m.metrosUtilizados}m</td>
+                          <td class="px-4 py-2 text-sm text-gray-600 dark:text-gray-300">${m.cliente}</td>
+                          <td class="px-4 py-2 text-sm text-gray-600 dark:text-gray-300">${m.funcionario}</td>
+                          <td class="px-4 py-2 text-sm text-gray-600 dark:text-gray-300">${m.equipe}</td>
+                        </tr>
+                      `).join('')}
+                    </tbody>
+                  </table>
+                </div>
+              ` : `
+                <p class="text-center text-gray-500 dark:text-gray-400 py-8">
+                  Nenhuma saída registrada ainda.
+                </p>
+              `}
+            </div>
+
+            <div class="mt-8 text-center text-xs text-gray-500 dark:text-gray-400">
+              © 2026 FiberManager
+            </div>
+          </div>
+        `
+      }
+
+      // ========================================
+      // FUNÇÃO PARA REGISTRAR SAÍDA
+      // ========================================
+      function registrarSaida(event) {
+        event.preventDefault()
+        
+        const bobinaId = parseInt(document.getElementById('bobinaId').value)
+        const equipe = document.getElementById('equipe').value
+        const funcionario = document.getElementById('funcionario').value
+        const cliente = document.getElementById('cliente').value
+        const ordemServico = document.getElementById('ordemServico').value
+        const metrosUtilizados = parseFloat(document.getElementById('metrosUtilizados').value)
+        const observacao = document.getElementById('observacao').value
+
+        // Validar
+        if (!bobinaId) {
+          alert('❌ Selecione uma bobina!')
+          return
+        }
+
+        const bobina = bobinas.find(b => b.id === bobinaId)
+        if (!bobina) {
+          alert('❌ Bobina não encontrada!')
+          return
+        }
+
+        const metrosDisponiveis = bobina.metragemInicial - bobina.metrosUsados
+        if (metrosUtilizados > metrosDisponiveis) {
+          alert(`❌ Metros indisponíveis! Disponível: ${metrosDisponiveis}m`)
+          return
+        }
+
+        if (metrosUtilizados <= 0) {
+          alert('❌ Informe uma quantidade válida de metros!')
+          return
+        }
+
+        // Atualizar bobina
+        const novoMetrosUsados = bobina.metrosUsados + metrosUtilizados
+        bobina.metrosUsados = novoMetrosUsados
+
+        // Atualizar status automaticamente
+        const metrosRestantes = bobina.metragemInicial - novoMetrosUsados
+        if (metrosRestantes === 0) {
+          bobina.status = 'Finalizada'
+        } else if (novoMetrosUsados > 0) {
+          bobina.status = 'Em uso'
+        }
+
+        // Registrar movimentação
+        const now = new Date()
+        const data = now.toLocaleDateString('pt-BR')
+        const hora = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+
+        movimentacoes.push({
+          id: proximoMovId++,
+          bobinaId: bobina.id,
+          bobinaCodigo: `#${bobina.id}`,
+          equipe,
+          funcionario,
+          cliente,
+          ordemServico,
+          metrosUtilizados,
+          observacao,
+          data,
+          hora
+        })
+
+        alert(`✅ Saída registrada com sucesso!\n\n📊 Bobina: #${bobina.id}\n📏 Metros: ${metrosUtilizados}m\n📦 Restante: ${metrosRestantes}m`)
+
+        // Limpar formulário
+        document.getElementById('bobinaId').value = ''
+        document.getElementById('equipe').value = ''
+        document.getElementById('funcionario').value = ''
+        document.getElementById('cliente').value = ''
+        document.getElementById('ordemServico').value = ''
+        document.getElementById('metrosUtilizados').value = ''
+        document.getElementById('observacao').value = ''
+
+        showSaida()
+      }
+
+      // ========================================
+      // FUNÇÕES GLOBAIS
+      // ========================================
+      
+      function toggleDarkMode() {
+        document.documentElement.classList.toggle('dark')
+      }
+
+      function handleLogin(event) {
+        event.preventDefault()
+        const email = document.getElementById('email').value
+        const senha = document.getElementById('senha').value
+        if (email && senha) {
+          showDashboard()
+        } else {
+          alert('Por favor, preencha todos os campos!')
+        }
+      }
+
+      // ========================================
+      // INICIAR O APP
+      // ========================================
+      showLogin()
+    </script>
+  </body>
+</html>
