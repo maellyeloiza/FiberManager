@@ -107,18 +107,22 @@
                     <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow">
                         <h2 class="text-lg font-semibold text-gray-800 dark:text-white mb-4">📋 Últimas Movimentações</h2>
                         ${movimentacoes.length === 0 ? '<p class="text-center text-gray-500 dark:text-gray-400 py-4">Nenhuma movimentação registrada.</p>' : 
-                            movimentacoes.slice(-5).reverse().map(m => `
-                                <div class="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-700 rounded-lg mb-2">
-                                    <div>
-                                        <span class="font-medium text-gray-800 dark:text-white">#${m.bobinaId}</span>
-                                        <span class="text-sm text-gray-500 dark:text-gray-400 ml-2">${m.equipe}</span>
+                            movimentacoes.slice(-5).reverse().map(m => {
+                                const bobina = bobinas.find(b => b.id === m.bobinaId);
+                                const nomeBobina = bobina ? bobina.localizacao : '#' + m.bobinaId;
+                                return `
+                                    <div class="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-700 rounded-lg mb-2">
+                                        <div>
+                                            <span class="font-medium text-gray-800 dark:text-white">${nomeBobina}</span>
+                                            <span class="text-sm text-gray-500 dark:text-gray-400 ml-2">${m.equipe}</span>
+                                        </div>
+                                        <div class="text-right">
+                                            <span class="font-bold text-orange-600">-${m.metrosUtilizados}m</span>
+                                            <span class="text-xs text-gray-500 dark:text-gray-400 block">${m.data}</span>
+                                        </div>
                                     </div>
-                                    <div class="text-right">
-                                        <span class="font-bold text-orange-600">-${m.metrosUtilizados}m</span>
-                                        <span class="text-xs text-gray-500 dark:text-gray-400 block">${m.data}</span>
-                                    </div>
-                                </div>
-                            `).join('')
+                                `;
+                            }).join('')
                         }
                     </div>
                     <div class="mt-4 text-center text-xs text-gray-500">© 2026 FiberManager</div>
@@ -348,7 +352,7 @@
         }
 
         // ============================================
-        // TELA DE SAÍDA
+        // TELA DE SAÍDA (COM CORREÇÕES)
         // ============================================
         function showSaida() {
             const disponiveis = bobinas.filter(b => (b.metragemInicial - b.metrosUsados) > 0);
@@ -374,7 +378,7 @@
                                 <select id="sBobinaId" class="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white" required>
                                     <option value="">Selecione uma bobina...</option>
                                     ${disponiveis.map(b => `
-                                        <option value="${b.id}">#${b.id} - ${b.fabricante} - ${b.tipo} (${b.metragemInicial - b.metrosUsados}m disponíveis)</option>
+                                        <option value="${b.id}">${b.localizacao} (${b.metragemInicial - b.metrosUsados}m disponíveis)</option>
                                     `).join('')}
                                 </select>
                                 ${disponiveis.length === 0 ? '<p class="text-red-500 text-sm mt-1">⚠️ Nenhuma bobina disponível!</p>' : ''}
@@ -382,13 +386,7 @@
 
                             <div>
                                 <label class="block text-sm font-medium mb-1">🏢 Empresa *</label>
-                                <select id="sEquipe" class="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white" required>
-                                    <option value="">Selecione...</option>
-                                    <option value="Empresa Alpha">Empresa Alpha</option>
-                                    <option value="Empresa Beta">Empresa Beta</option>
-                                    <option value="Empresa Gama">Empresa Gama</option>
-                                    <option value="Empresa Delta">Empresa Delta</option>
-                                </select>
+                                <input type="text" id="sEquipe" placeholder="Digite o nome da empresa" class="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white" required>
                             </div>
 
                             <div>
@@ -434,16 +432,20 @@
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        ${movimentacoes.slice().reverse().map(m => `
-                                            <tr class="border-b dark:border-gray-700">
-                                                <td class="px-4 py-2">${m.data}</td>
-                                                <td class="px-4 py-2 font-medium">#${m.bobinaId}</td>
-                                                <td class="px-4 py-2 font-bold text-orange-600">${m.metrosUtilizados}m</td>
-                                                <td class="px-4 py-2">${m.equipe}</td>
-                                                <td class="px-4 py-2">${m.funcionario}</td>
-                                                <td class="px-4 py-2">${m.ordemServico}</td>
-                                            </tr>
-                                        `).join('')}
+                                        ${movimentacoes.slice().reverse().map(m => {
+                                            const bobina = bobinas.find(b => b.id === m.bobinaId);
+                                            const nomeBobina = bobina ? bobina.localizacao : '#' + m.bobinaId;
+                                            return `
+                                                <tr class="border-b dark:border-gray-700">
+                                                    <td class="px-4 py-2">${m.data}</td>
+                                                    <td class="px-4 py-2 font-medium">${nomeBobina}</td>
+                                                    <td class="px-4 py-2 font-bold text-orange-600">${m.metrosUtilizados}m</td>
+                                                    <td class="px-4 py-2">${m.equipe}</td>
+                                                    <td class="px-4 py-2">${m.funcionario}</td>
+                                                    <td class="px-4 py-2">${m.ordemServico}</td>
+                                                </tr>
+                                            `;
+                                        }).join('')}
                                     </tbody>
                                 </table>
                             </div>
@@ -454,7 +456,7 @@
         }
 
         // ============================================
-        // FUNÇÃO PARA REGISTRAR SAÍDA (CORRIGIDA)
+        // FUNÇÃO PARA REGISTRAR SAÍDA
         // ============================================
         function registrarSaida(event) {
             event.preventDefault();
@@ -471,20 +473,35 @@
                 return; 
             }
             
+            if (!equipe.trim()) { 
+                alert('❌ Digite o nome da empresa!'); 
+                return; 
+            }
+            
+            if (!funcionario.trim()) { 
+                alert('❌ Digite o nome do técnico!'); 
+                return; 
+            }
+            
+            if (!ordem.trim()) { 
+                alert('❌ Digite a Ordem de Serviço!'); 
+                return; 
+            }
+            
             const bobina = bobinas.find(b => b.id === bobinaId);
             if (!bobina) { 
                 alert('❌ Bobina não encontrada!'); 
                 return; 
             }
 
+            if (!metros || metros <= 0) { 
+                alert('❌ Informe uma quantidade válida de metros!'); 
+                return; 
+            }
+
             const disponivel = bobina.metragemInicial - bobina.metrosUsados;
             if (metros > disponivel) { 
                 alert(`❌ Disponível: ${disponivel}m`); 
-                return; 
-            }
-            
-            if (metros <= 0) { 
-                alert('❌ Informe uma quantidade válida!'); 
                 return; 
             }
 
