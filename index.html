@@ -64,6 +64,7 @@
         function showDashboard() {
             const total = bobinas.length;
             const metros = bobinas.reduce((t, b) => t + (b.metragemInicial - b.metrosUsados), 0);
+            // ALTERADO: estoque baixo agora é < 1500m
             const alerta = bobinas.filter(b => (b.metragemInicial - b.metrosUsados) < 1500 && (b.metragemInicial - b.metrosUsados) > 0).length;
             const consumoDia = movimentacoes.filter(m => m.data === new Date().toLocaleDateString('pt-BR')).reduce((t, m) => t + m.metrosUtilizados, 0);
 
