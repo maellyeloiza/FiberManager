@@ -5,9 +5,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>FiberManager - Gerenciamento de Bobinas</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      /* Estilo extra para melhorar a visualização */
+      .dark {
+        background-color: #1a1a2e;
+      }
+      body {
+        transition: background-color 0.3s;
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>
+    
+    <!-- Carregar os scripts na ordem correta -->
     <script type="module" src="src/app.js"></script>
+    <script type="module" src="src/dashboard.js"></script>
   </body>
 </html>
