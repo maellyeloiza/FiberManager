@@ -333,7 +333,7 @@
         }
 
         // ============================================
-        // TELA DE SAÍDA (ATUALIZADA - SEM CLIENTE)
+        // TELA DE SAÍDA
         // ============================================
         function showSaida() {
             const disponiveis = bobinas.filter(b => (b.metragemInicial - b.metrosUsados) > 0);
@@ -439,7 +439,7 @@
         }
 
         // ============================================
-        // FUNÇÃO PARA REGISTRAR SAÍDA (ATUALIZADA)
+        // FUNÇÃO PARA REGISTRAR SAÍDA (CORRIGIDA)
         // ============================================
         function registrarSaida(event) {
             event.preventDefault();
@@ -451,20 +451,37 @@
             const metros = parseFloat(document.getElementById('sMetros').value);
             const obs = document.getElementById('sObservacao').value;
 
-            if (!bobinaId) { alert('❌ Selecione uma bobina!'); return; }
+            if (!bobinaId) { 
+                alert('❌ Selecione uma bobina!'); 
+                return; 
+            }
             
             const bobina = bobinas.find(b => b.id === bobinaId);
-            if (!bobina) { alert('❌ Bobina não encontrada!'); return; }
+            if (!bobina) { 
+                alert('❌ Bobina não encontrada!'); 
+                return; 
+            }
 
             const disponivel = bobina.metragemInicial - bobina.metrosUsados;
-            if (metros > disponivel) { alert(`❌ Disponível: ${disponivel}m`); return; }
-            if (metros <= 0) { alert('❌ Informe uma quantidade válida!'); return; }
+            if (metros > disponivel) { 
+                alert(`❌ Disponível: ${disponivel}m`); 
+                return; 
+            }
+            
+            if (metros <= 0) { 
+                alert('❌ Informe uma quantidade válida!'); 
+                return; 
+            }
 
             // Atualizar bobina
             bobina.metrosUsados += metros;
             const restante = bobina.metragemInicial - bobina.metrosUsados;
-            if (restante === 0) bobina.status = 'Finalizada';
-            else if (bobina.metrosUsados > 0) bobina.status = 'Em uso';
+            
+            if (restante === 0) {
+                bobina.status = 'Finalizada';
+            } else if (bobina.metrosUsados > 0) {
+                bobina.status = 'Em uso';
+            }
 
             // Registrar movimentação
             const now = new Date();
