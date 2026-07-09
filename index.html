@@ -340,7 +340,7 @@
         }
 
         // ============================================
-        // EXPORTAÇÃO EXCEL (CORRIGIDA)
+        // EXPORTAÇÃO EXCEL (CORRIGIDA - HTML TABLE)
         // ============================================
         function exportarExcel() {
             if (movimentacoes.length === 0) {
@@ -348,21 +348,87 @@
                 return;
             }
 
-            let dados = 'Data;Bobina;Metros;Empresa;Tecnico;OS\n';
+            let html = `
+            <html xmlns:o="urn:schemas-microsoft-com:office:office" 
+                  xmlns:x="urn:schemas-microsoft-com:office:excel" 
+                  xmlns="http://www.w3.org/TR/REC-html40">
+            <head>
+                <meta charset="UTF-8">
+                <!--[if gte mso 9]>
+                <xml>
+                    <x:ExcelWorkbook>
+                        <x:ExcelWorksheets>
+                            <x:ExcelWorksheet>
+                                <x:Name>Relatório</x:Name>
+                                <x:WorksheetOptions>
+                                    <x:DisplayGridlines/>
+                                </x:WorksheetOptions>
+                            </x:ExcelWorksheet>
+                        </x:ExcelWorksheets>
+                    </x:ExcelWorkbook>
+                </xml>
+                <![endif]-->
+                <style>
+                    table { border-collapse: collapse; width: 100%; }
+                    th { background-color: #4F46E5; color: white; padding: 8px; border: 1px solid #000; }
+                    td { padding: 8px; border: 1px solid #ccc; }
+                    .header { background-color: #e9ecef; font-weight: bold; }
+                </style>
+            </head>
+            <body>
+                <h2>🔷 FiberManager - Relatório de Movimentações</h2>
+                <p>Gerado em: ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')}</p>
+                <br>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Data</th>
+                            <th>Bobina</th>
+                            <th>Metros</th>
+                            <th>Empresa</th>
+                            <th>Técnico</th>
+                            <th>OS</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
             movimentacoes.forEach(m => {
                 const bobina = bobinas.find(b => b.id === m.bobinaId);
                 const nomeBobina = bobina ? `${bobina.fabricante} - ${bobina.lote} - ${bobina.tipo}` : '#' + m.bobinaId;
-                dados += `${m.data};${nomeBobina};${m.metrosUtilizados};${m.equipe};${m.funcionario};${m.ordemServico || '-'}\n`;
+                html += `
+                        <tr>
+                            <td>${m.data}</td>
+                            <td>${nomeBobina}</td>
+                            <td>${m.metrosUtilizados}</td>
+                            <td>${m.equipe}</td>
+                            <td>${m.funcionario}</td>
+                            <td>${m.ordemServico || '-'}</td>
+                        </tr>
+                `;
             });
 
-            const blob = new Blob([dados], { type: 'text/csv;charset=utf-8;' });
+            html += `
+                    </tbody>
+                </table>
+                <br>
+                <p><strong>Resumo:</strong></p>
+                <ul>
+                    <li>Total de Movimentações: ${movimentacoes.length}</li>
+                    <li>Total de Metros Consumidos: ${movimentacoes.reduce((t, m) => t + m.metrosUtilizados, 0)}m</li>
+                </ul>
+            </body>
+            </html>
+            `;
+
+            const blob = new Blob([html], { type: 'application/vnd.ms-excel;charset=utf-8' });
             const link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
-            link.download = `relatorio_fibermanager_${new Date().toLocaleDateString('pt-BR').replace(/\//g, '-')}.csv`;
+            link.download = `relatorio_fibermanager_${new Date().toLocaleDateString('pt-BR').replace(/\//g, '-')}.xls`;
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
-            alert('✅ Relatório exportado com sucesso!\n\n📌 Dica: Ao abrir no Excel, use o separador ";" (ponto e vírgula)');
+            alert('✅ Relatório exportado com sucesso!\n\n📌 O arquivo será aberto diretamente no Excel com as colunas separadas!');
         }
 
         // ============================================
