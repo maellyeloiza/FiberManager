@@ -64,7 +64,7 @@
         function showDashboard() {
             const total = bobinas.length;
             const metros = bobinas.reduce((t, b) => t + (b.metragemInicial - b.metrosUsados), 0);
-            const alerta = bobinas.filter(b => (b.metragemInicial - b.metrosUsados) < 500 && (b.metragemInicial - b.metrosUsados) > 0).length;
+            const alerta = bobinas.filter(b => (b.metragemInicial - b.metrosUsados) < 1500 && (b.metragemInicial - b.metrosUsados) > 0).length;
             const consumoDia = movimentacoes.filter(m => m.data === new Date().toLocaleDateString('pt-BR')).reduce((t, m) => t + m.metrosUtilizados, 0);
 
             document.getElementById('root').innerHTML = `
@@ -129,13 +129,14 @@
         }
 
         // ============================================
-        // TELA DE RELATÓRIOS
+        // TELA DE RELATÓRIOS (ATUALIZADA)
         // ============================================
         function showRelatorios() {
             const totalBobinas = bobinas.length;
             const totalMetros = bobinas.reduce((t, b) => t + (b.metragemInicial - b.metrosUsados), 0);
             const totalConsumido = bobinas.reduce((t, b) => t + b.metrosUsados, 0);
             
+            // Consumo por empresa
             const empresas = {};
             movimentacoes.forEach(m => {
                 if (empresas[m.equipe]) {
@@ -145,6 +146,7 @@
                 }
             });
             
+            // Consumo por técnico
             const tecnicos = {};
             movimentacoes.forEach(m => {
                 if (tecnicos[m.funcionario]) {
@@ -154,11 +156,45 @@
                 }
             });
             
-            const estoqueBaixo = bobinas.filter(b => (b.metragemInicial - b.metrosUsados) < 500 && (b.metragemInicial - b.metrosUsados) > 0);
+            // Consumo por bobina
+            const consumoBobinas = {};
+            movimentacoes.forEach(m => {
+                const bobina = bobinas.find(b => b.id === m.bobinaId);
+                const nomeBobina = bobina ? `${bobina.fabricante} - ${bobina.lote} - ${bobina.tipo}` : '#' + m.bobinaId;
+                if (consumoBobinas[nomeBobina]) {
+                    consumoBobinas[nomeBobina] += m.metrosUtilizados;
+                } else {
+                    consumoBobinas[nomeBobina] = m.metrosUtilizados;
+                }
+            });
+            
+            // ESTOQUE BAIXO - ALTERADO PARA < 1500m
+            const estoqueBaixo = bobinas.filter(b => (b.metragemInicial - b.metrosUsados) < 1500 && (b.metragemInicial - b.metrosUsados) > 0);
             
             const statusNova = bobinas.filter(b => b.status === 'Nova').length;
             const statusEmUso = bobinas.filter(b => b.status === 'Em uso').length;
             const statusFinalizada = bobinas.filter(b => b.status === 'Finalizada').length;
+
+            // Ordenar consumo por bobina (maior para menor)
+            const sortedConsumoBobinas = Object.keys(consumoBobinas).sort((a, b) => consumoBobinas[b] - consumoBobinas[a]);
+
+            // Gerar HTML do gráfico de consumo por bobina
+            const maxConsumo = Math.max(...Object.values(consumoBobinas), 1);
+            const graficoBobinas = sortedConsumoBobinas.slice(0, 10).map(nome => {
+                const valor = consumoBobinas[nome];
+                const percentual = (valor / maxConsumo * 100);
+                return `
+                    <div class="mb-2">
+                        <div class="flex justify-between text-sm">
+                            <span class="text-gray-600 dark:text-gray-400 truncate max-w-[60%]">${nome}</span>
+                            <span class="font-bold text-gray-800 dark:text-white">${valor}m</span>
+                        </div>
+                        <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3 mt-1">
+                            <div class="bg-purple-500 h-3 rounded-full" style="width: ${percentual}%"></div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
 
             const listaEstoqueBaixo = estoqueBaixo.map(b => `
                 <div class="flex justify-between items-center p-2 bg-red-50 dark:bg-red-900/30 rounded-lg mb-1">
@@ -167,14 +203,14 @@
                 </div>
             `).join('');
 
-            const listaEmpresas = Object.keys(empresas).map(empresa => `
+            const listaEmpresas = Object.keys(empresas).sort((a, b) => empresas[b] - empresas[a]).map(empresa => `
                 <div class="flex justify-between items-center p-2 bg-gray-50 dark:bg-gray-700 rounded-lg mb-1">
                     <span class="text-sm font-medium text-gray-800 dark:text-white">${empresa}</span>
                     <span class="text-sm font-bold text-blue-600">${empresas[empresa]}m</span>
                 </div>
             `).join('');
 
-            const listaTecnicos = Object.keys(tecnicos).map(tecnico => `
+            const listaTecnicos = Object.keys(tecnicos).sort((a, b) => tecnicos[b] - tecnicos[a]).map(tecnico => `
                 <div class="flex justify-between items-center p-2 bg-gray-50 dark:bg-gray-700 rounded-lg mb-1">
                     <span class="text-sm font-medium text-gray-800 dark:text-white">${tecnico}</span>
                     <span class="text-sm font-bold text-green-600">${tecnicos[tecnico]}m</span>
@@ -196,6 +232,7 @@
                         </div>
                     </div>
 
+                    <!-- Cards Resumo -->
                     <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                         <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow">
                             <p class="text-sm text-gray-500 dark:text-gray-400">📦 Total Bobinas</p>
@@ -215,6 +252,7 @@
                         </div>
                     </div>
 
+                    <!-- Status e Estoque Baixo -->
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                         <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow">
                             <h2 class="text-lg font-semibold text-gray-800 dark:text-white mb-4">📌 Status das Bobinas</h2>
@@ -249,13 +287,15 @@
                             </div>
                         </div>
 
+                        <!-- ESTOQUE BAIXO - ALTERADO PARA < 1500m -->
                         <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow">
-                            <h2 class="text-lg font-semibold text-gray-800 dark:text-white mb-4">⚠️ Estoque Baixo (&lt; 500m)</h2>
+                            <h2 class="text-lg font-semibold text-gray-800 dark:text-white mb-4">⚠️ Estoque Baixo (&lt; 1500m)</h2>
                             ${estoqueBaixo.length > 0 ? listaEstoqueBaixo : '<p class="text-center text-gray-500 dark:text-gray-400 py-4">✅ Nenhuma bobina com estoque baixo!</p>'}
                         </div>
                     </div>
 
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                    <!-- Consumo por Empresa, Técnico e Bobina -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
                         <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow">
                             <h2 class="text-lg font-semibold text-gray-800 dark:text-white mb-4">🏢 Consumo por Empresa</h2>
                             ${Object.keys(empresas).length > 0 ? listaEmpresas : '<p class="text-center text-gray-500 dark:text-gray-400 py-4">Nenhum dado registrado.</p>'}
@@ -264,8 +304,13 @@
                             <h2 class="text-lg font-semibold text-gray-800 dark:text-white mb-4">👤 Consumo por Técnico</h2>
                             ${Object.keys(tecnicos).length > 0 ? listaTecnicos : '<p class="text-center text-gray-500 dark:text-gray-400 py-4">Nenhum dado registrado.</p>'}
                         </div>
+                        <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow">
+                            <h2 class="text-lg font-semibold text-gray-800 dark:text-white mb-4">📦 Consumo por Bobina</h2>
+                            ${Object.keys(consumoBobinas).length > 0 ? graficoBobinas : '<p class="text-center text-gray-500 dark:text-gray-400 py-4">Nenhum dado registrado.</p>'}
+                        </div>
                     </div>
 
+                    <!-- Tabela de Movimentações -->
                     <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow">
                         <h2 class="text-lg font-semibold text-gray-800 dark:text-white mb-4">📋 Todas as Movimentações</h2>
                         ${movimentacoes.length === 0 ? '<p class="text-center text-gray-500 dark:text-gray-400 py-4">Nenhuma movimentação registrada.</p>' : `
@@ -306,7 +351,7 @@
         }
 
         // ============================================
-        // FUNÇÕES DE EXPORTAÇÃO
+        // FUNÇÕES DE EXPORTAÇÃO (ATUALIZADAS)
         // ============================================
         function exportarExcel() {
             if (movimentacoes.length === 0) {
@@ -314,6 +359,7 @@
                 return;
             }
 
+            // Cabeçalhos separados por vírgula (CSV)
             let dados = 'Data,Bobina,Metros,Empresa,Tecnico,OS\n';
             movimentacoes.forEach(m => {
                 const bobina = bobinas.find(b => b.id === m.bobinaId);
@@ -321,10 +367,11 @@
                 dados += `${m.data},${nomeBobina},${m.metrosUtilizados},${m.equipe},${m.funcionario},${m.ordemServico || '-'}\n`;
             });
 
+            // Criar arquivo CSV com separador correto
             const blob = new Blob([dados], { type: 'text/csv;charset=utf-8;' });
             const link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
-            link.download = `relatorio_fibermanager_${new Date().toLocaleDateString('pt-BR')}.csv`;
+            link.download = `relatorio_fibermanager_${new Date().toLocaleDateString('pt-BR').replace(/\//g, '-')}.csv`;
             link.click();
             alert('✅ Relatório exportado com sucesso!');
         }
@@ -359,7 +406,7 @@
             const blob = new Blob([conteudo], { type: 'text/plain;charset=utf-8;' });
             const link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
-            link.download = `relatorio_fibermanager_${new Date().toLocaleDateString('pt-BR')}.txt`;
+            link.download = `relatorio_fibermanager_${new Date().toLocaleDateString('pt-BR').replace(/\//g, '-')}.txt`;
             link.click();
             alert('✅ Relatório exportado com sucesso!');
         }
