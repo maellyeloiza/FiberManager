@@ -1,3 +1,443 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FiberManager</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script>
+        // ============================================
+        // DADOS INICIAIS
+        // ============================================
+        let bobinas = [
+            { id: 1, localizacao: 'Depósito A - Prateleira 1', fabricante: 'Corning', lote: 'LOT-001', tipo: 'SMF-28', capacidade: 24, metragemInicial: 2000, metrosUsados: 150, status: 'Em uso' },
+            { id: 2, localizacao: 'Depósito B - Prateleira 3', fabricante: 'Prysmian', lote: 'LOT-002', tipo: 'G.652.D', capacidade: 48, metragemInicial: 3000, metrosUsados: 0, status: 'Nova' },
+            { id: 3, localizacao: 'Depósito A - Prateleira 2', fabricante: 'Furukawa', lote: 'LOT-003', tipo: 'G.655', capacidade: 12, metragemInicial: 1500, metrosUsados: 1500, status: 'Finalizada' }
+        ];
+
+        let movimentacoes = [];
+        let proximoId = 4;
+        let filtroBusca = '';
+
+        // ============================================
+        // FUNÇÕES DE TELA
+        // ============================================
+        function showLogin() {
+            document.getElementById('root').innerHTML = `
+                <div class="min-h-screen bg-gradient-to-br from-indigo-50 to-blue-50 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center p-4">
+                    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md p-8">
+                        <div class="flex justify-end">
+                            <button onclick="toggleDarkMode()" class="text-2xl">🌙</button>
+                        </div>
+                        <div class="text-center mb-8">
+                            <h1 class="text-4xl font-bold text-indigo-600 dark:text-indigo-400">🔷 FiberManager</h1>
+                            <p class="text-gray-500 dark:text-gray-400 mt-2">Gerenciamento de Bobinas</p>
+                        </div>
+                        <form onsubmit="handleLogin(event)" class="space-y-4">
+                            <input type="email" id="email" placeholder="📧 E-mail" class="w-full px-4 py-3 border rounded-lg dark:bg-gray-700 dark:text-white" required>
+                            <input type="password" id="senha" placeholder="🔒 Senha" class="w-full px-4 py-3 border rounded-lg dark:bg-gray-700 dark:text-white" required>
+                            <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-lg transition">Entrar</button>
+                            <div class="text-center"><a href="#" class="text-sm text-indigo-600 dark:text-indigo-400">Esqueci a senha?</a></div>
+                        </form>
+                        <div class="mt-8 text-center text-xs text-gray-500">© 2026 FiberManager</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function showDashboard() {
+            const total = bobinas.length;
+            const metros = bobinas.reduce((t, b) => t + (b.metragemInicial - b.metrosUsados), 0);
+            const alerta = bobinas.filter(b => (b.metragemInicial - b.metrosUsados) < 500 && (b.metragemInicial - b.metrosUsados) > 0).length;
+            const consumoDia = movimentacoes.filter(m => m.data === new Date().toLocaleDateString('pt-BR')).reduce((t, m) => t + m.metrosUtilizados, 0);
+
+            document.getElementById('root').innerHTML = `
+                <div class="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 md:p-6">
+                    <div class="flex flex-wrap justify-between items-center mb-6">
+                        <div>
+                            <h1 class="text-2xl font-bold text-gray-800 dark:text-white">📊 Dashboard</h1>
+                            <p class="text-gray-500 dark:text-gray-400">Bem-vindo ao FiberManager!</p>
+                        </div>
+                        <div class="flex flex-wrap gap-2 mt-3 md:mt-0">
+                            <button onclick="showBobinas()" class="px-4 py-2 bg-green-500 text-white rounded-lg text-sm hover:bg-green-600">📦 Bobinas</button>
+                            <button onclick="showSaida()" class="px-4 py-2 bg-orange-500 text-white rounded-lg text-sm hover:bg-orange-600">📤 Registrar Saída</button>
+                            <button onclick="toggleDarkMode()" class="px-4 py-2 bg-gray-300 dark:bg-gray-700 rounded-lg text-sm">🌙</button>
+                            <button onclick="showLogin()" class="px-4 py-2 bg-red-500 text-white rounded-lg text-sm hover:bg-red-600">Sair</button>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                        <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow">
+                            <p class="text-sm text-gray-500 dark:text-gray-400">📦 Total</p>
+                            <p class="text-2xl font-bold text-gray-800 dark:text-white">${total}</p>
+                        </div>
+                        <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow">
+                            <p class="text-sm text-gray-500 dark:text-gray-400">📏 Metros</p>
+                            <p class="text-2xl font-bold text-gray-800 dark:text-white">${metros}m</p>
+                        </div>
+                        <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow">
+                            <p class="text-sm text-gray-500 dark:text-gray-400">📉 Consumo Dia</p>
+                            <p class="text-2xl font-bold text-gray-800 dark:text-white">${consumoDia}m</p>
+                        </div>
+                        <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow">
+                            <p class="text-sm text-gray-500 dark:text-gray-400">⚠️ Alerta</p>
+                            <p class="text-2xl font-bold text-red-500">${alerta}</p>
+                        </div>
+                    </div>
+
+                    <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow">
+                        <h2 class="text-lg font-semibold text-gray-800 dark:text-white mb-4">📋 Últimas Movimentações</h2>
+                        ${movimentacoes.length === 0 ? '<p class="text-center text-gray-500 dark:text-gray-400 py-4">Nenhuma movimentação registrada.</p>' : 
+                            movimentacoes.slice(-5).reverse().map(m => `
+                                <div class="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-700 rounded-lg mb-2">
+                                    <div>
+                                        <span class="font-medium text-gray-800 dark:text-white">#${m.bobinaId}</span>
+                                        <span class="text-sm text-gray-500 dark:text-gray-400 ml-2">${m.equipe}</span>
+                                    </div>
+                                    <div class="text-right">
+                                        <span class="font-bold text-orange-600">-${m.metrosUtilizados}m</span>
+                                        <span class="text-xs text-gray-500 dark:text-gray-400 block">${m.data}</span>
+                                    </div>
+                                </div>
+                            `).join('')
+                        }
+                    </div>
+                    <div class="mt-4 text-center text-xs text-gray-500">© 2026 FiberManager</div>
+                </div>
+            `;
+        }
+
+        // ============================================
+        // TELA DE BOBINAS
+        // ============================================
+        function showBobinas() {
+            let lista = bobinas;
+            if (filtroBusca.trim()) {
+                const termo = filtroBusca.toLowerCase();
+                lista = bobinas.filter(b => 
+                    b.id.toString().includes(termo) ||
+                    b.localizacao.toLowerCase().includes(termo) ||
+                    b.fabricante.toLowerCase().includes(termo) ||
+                    b.lote.toLowerCase().includes(termo) ||
+                    b.tipo.toLowerCase().includes(termo) ||
+                    b.status.toLowerCase().includes(termo)
+                );
+            }
+
+            document.getElementById('root').innerHTML = `
+                <div class="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 md:p-6">
+                    <div class="flex flex-wrap justify-between items-center mb-6">
+                        <div>
+                            <h1 class="text-2xl font-bold text-gray-800 dark:text-white">📦 Bobinas</h1>
+                            <p class="text-gray-500 dark:text-gray-400">${lista.length} bobina(s) encontrada(s)</p>
+                        </div>
+                        <div class="flex flex-wrap gap-2 mt-3 md:mt-0">
+                            <button onclick="showFormBobina()" class="px-4 py-2 bg-blue-500 text-white rounded-lg text-sm hover:bg-blue-600">➕ Nova</button>
+                            <button onclick="showDashboard()" class="px-4 py-2 bg-gray-500 text-white rounded-lg text-sm hover:bg-gray-600">← Voltar</button>
+                            <button onclick="toggleDarkMode()" class="px-4 py-2 bg-gray-300 dark:bg-gray-700 rounded-lg text-sm">🌙</button>
+                        </div>
+                    </div>
+
+                    <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow mb-6">
+                        <div class="flex gap-3">
+                            <div class="flex-1 relative">
+                                <span class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">🔍</span>
+                                <input type="text" id="buscaInput" value="${filtroBusca}" oninput="filtrarBobinas(this.value)" placeholder="Buscar..." class="w-full pl-10 pr-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white">
+                            </div>
+                            <button onclick="limparBusca()" class="px-4 py-2 bg-gray-300 dark:bg-gray-600 rounded-lg">Limpar</button>
+                        </div>
+                    </div>
+
+                    <div class="bg-white dark:bg-gray-800 rounded-xl shadow overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead class="bg-gray-50 dark:bg-gray-700">
+                                <tr>
+                                    <th class="px-4 py-2 text-left">ID</th>
+                                    <th class="px-4 py-2 text-left">Localização</th>
+                                    <th class="px-4 py-2 text-left">Fabricante</th>
+                                    <th class="px-4 py-2 text-left">Lote</th>
+                                    <th class="px-4 py-2 text-left">Tipo</th>
+                                    <th class="px-4 py-2 text-left">Capacidade</th>
+                                    <th class="px-4 py-2 text-left">Inicial</th>
+                                    <th class="px-4 py-2 text-left">Usados</th>
+                                    <th class="px-4 py-2 text-left">Restante</th>
+                                    <th class="px-4 py-2 text-left">Status</th>
+                                    <th class="px-4 py-2 text-left">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${lista.length === 0 ? `
+                                    <tr><td colspan="11" class="text-center py-8 text-gray-500">Nenhuma bobina encontrada</td></tr>
+                                ` : lista.map(b => `
+                                    <tr class="border-b dark:border-gray-700">
+                                        <td class="px-4 py-2 font-medium">#${b.id}</td>
+                                        <td class="px-4 py-2">${b.localizacao}</td>
+                                        <td class="px-4 py-2">${b.fabricante}</td>
+                                        <td class="px-4 py-2">${b.lote}</td>
+                                        <td class="px-4 py-2">${b.tipo}</td>
+                                        <td class="px-4 py-2">${b.capacidade} FO</td>
+                                        <td class="px-4 py-2">${b.metragemInicial}m</td>
+                                        <td class="px-4 py-2">${b.metrosUsados}m</td>
+                                        <td class="px-4 py-2">${b.metragemInicial - b.metrosUsados}m</td>
+                                        <td class="px-4 py-2">
+                                            <span class="px-2 py-1 rounded-full text-xs ${b.status === 'Nova' ? 'bg-green-100 text-green-700' : b.status === 'Em uso' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700'}">${b.status}</span>
+                                        </td>
+                                        <td class="px-4 py-2">
+                                            <button onclick="editarBobina(${b.id})" class="text-blue-600 mr-2">✏️</button>
+                                            <button onclick="excluirBobina(${b.id})" class="text-red-600">🗑️</button>
+                                        </td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="mt-4 grid grid-cols-5 gap-2 text-center">
+                        <div class="bg-white dark:bg-gray-800 rounded-lg p-2"><p class="text-xs text-gray-500">Total</p><p class="font-bold">${bobinas.length}</p></div>
+                        <div class="bg-white dark:bg-gray-800 rounded-lg p-2"><p class="text-xs text-gray-500">Novas</p><p class="font-bold text-green-600">${bobinas.filter(b => b.status === 'Nova').length}</p></div>
+                        <div class="bg-white dark:bg-gray-800 rounded-lg p-2"><p class="text-xs text-gray-500">Em Uso</p><p class="font-bold text-blue-600">${bobinas.filter(b => b.status === 'Em uso').length}</p></div>
+                        <div class="bg-white dark:bg-gray-800 rounded-lg p-2"><p class="text-xs text-gray-500">Finalizadas</p><p class="font-bold text-gray-600">${bobinas.filter(b => b.status === 'Finalizada').length}</p></div>
+                        <div class="bg-white dark:bg-gray-800 rounded-lg p-2"><p class="text-xs text-gray-500">Filtradas</p><p class="font-bold text-orange-600">${lista.length}</p></div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // ============================================
+        // FORMULÁRIO DE BOBINA
+        // ============================================
+        function showFormBobina(id = null) {
+            const editando = id !== null;
+            const b = editando ? bobinas.find(x => x.id === id) : null;
+            if (editando && !b) { alert('Bobina não encontrada!'); showBobinas(); return; }
+
+            const titulo = editando ? '✏️ Editar' : '➕ Nova Bobina';
+            const botao = editando ? 'Atualizar' : 'Cadastrar';
+
+            document.getElementById('root').innerHTML = `
+                <div class="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 md:p-6 flex items-center justify-center">
+                    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-2xl p-8">
+                        <div class="flex justify-between items-center mb-6">
+                            <h2 class="text-2xl font-bold text-gray-800 dark:text-white">${titulo}</h2>
+                            <button onclick="showBobinas()" class="text-2xl text-gray-500">✕</button>
+                        </div>
+                        <form onsubmit="salvarBobina(event)">
+                            <input type="hidden" id="editId" value="${editando ? id : ''}">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div class="md:col-span-2">
+                                    <label class="block text-sm font-medium mb-1">📍 Localização</label>
+                                    <input type="text" id="fLocalizacao" value="${editando ? b.localizacao : ''}" class="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white" required>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">🏭 Fabricante</label>
+                                    <input type="text" id="fFabricante" value="${editando ? b.fabricante : ''}" class="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white" required>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">📦 Lote</label>
+                                    <input type="text" id="fLote" value="${editando ? b.lote : ''}" class="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white" required>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">🔷 Tipo</label>
+                                    <input type="text" id="fTipo" value="${editando ? b.tipo : ''}" class="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white" required>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">📊 Capacidade (FO)</label>
+                                    <input type="number" id="fCapacidade" value="${editando ? b.capacidade : ''}" class="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white" required>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">📏 Metragem Inicial (m)</label>
+                                    <input type="number" id="fMetragemInicial" value="${editando ? b.metragemInicial : ''}" class="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white" required>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">📉 Metros Usados (m)</label>
+                                    <input type="number" id="fMetrosUsados" value="${editando ? b.metrosUsados : ''}" class="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white" required>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">📌 Status</label>
+                                    <select id="fStatus" class="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white">
+                                        <option value="Nova" ${editando && b.status === 'Nova' ? 'selected' : ''}>Nova</option>
+                                        <option value="Em uso" ${editando && b.status === 'Em uso' ? 'selected' : ''}>Em uso</option>
+                                        <option value="Finalizada" ${editando && b.status === 'Finalizada' ? 'selected' : ''}>Finalizada</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="mt-4 p-3 bg-gray-100 dark:bg-gray-700 rounded-lg">
+                                <p class="text-sm">📊 <strong>Metragem Restante:</strong> <span class="text-blue-600 font-bold">${editando ? b.metragemInicial - b.metrosUsados : 0}m</span></p>
+                            </div>
+                            <div class="flex gap-3 mt-6">
+                                <button type="submit" class="flex-1 bg-blue-500 text-white font-bold py-3 rounded-lg hover:bg-blue-600">${botao}</button>
+                                <button type="button" onclick="showBobinas()" class="flex-1 bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-white font-bold py-3 rounded-lg">Cancelar</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            `;
+        }
+
+        // ============================================
+        // FUNÇÕES CRUD
+        // ============================================
+        function salvarBobina(event) {
+            event.preventDefault();
+            const id = document.getElementById('editId').value;
+            const localizacao = document.getElementById('fLocalizacao').value;
+            const fabricante = document.getElementById('fFabricante').value;
+            const lote = document.getElementById('fLote').value;
+            const tipo = document.getElementById('fTipo').value;
+            const capacidade = parseFloat(document.getElementById('fCapacidade').value);
+            const metragemInicial = parseFloat(document.getElementById('fMetragemInicial').value);
+            const metrosUsados = parseFloat(document.getElementById('fMetrosUsados').value);
+            const status = document.getElementById('fStatus').value;
+
+            if (metrosUsados > metragemInicial) {
+                alert('❌ Metros usados não podem ser maiores que a metragem inicial!');
+                return;
+            }
+
+            if (id) {
+                const index = bobinas.findIndex(b => b.id === parseInt(id));
+                if (index !== -1) {
+                    bobinas[index] = { ...bobinas[index], localizacao, fabricante, lote, tipo, capacidade, metragemInicial, metrosUsados, status };
+                }
+                alert('✅ Bobina atualizada!');
+            } else {
+                bobinas.push({ id: proximoId++, localizacao, fabricante, lote, tipo, capacidade, metragemInicial, metrosUsados, status });
+                alert('✅ Bobina cadastrada!');
+            }
+            showBobinas();
+        }
+
+        function editarBobina(id) { showFormBobina(id); }
+
+        function excluirBobina(id) {
+            if (confirm('⚠️ Tem certeza?')) {
+                bobinas = bobinas.filter(b => b.id !== id);
+                alert('🗑️ Bobina excluída!');
+                showBobinas();
+            }
+        }
+
+        function filtrarBobinas(termo) {
+            filtroBusca = termo;
+            showBobinas();
+        }
+
+        function limparBusca() {
+            filtroBusca = '';
+            document.getElementById('buscaInput').value = '';
+            showBobinas();
+        }
+
+        // ============================================
+        // TELA DE SAÍDA (ATUALIZADA - SEM CLIENTE)
+        // ============================================
+        function showSaida() {
+            const disponiveis = bobinas.filter(b => (b.metragemInicial - b.metrosUsados) > 0);
+
+            document.getElementById('root').innerHTML = `
+                <div class="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 md:p-6">
+                    <div class="flex flex-wrap justify-between items-center mb-6">
+                        <div>
+                            <h1 class="text-2xl font-bold text-gray-800 dark:text-white">📤 Registrar Saída</h1>
+                            <p class="text-gray-500 dark:text-gray-400">Registre o consumo de metros das bobinas</p>
+                        </div>
+                        <div class="flex gap-2 mt-3 md:mt-0">
+                            <button onclick="showDashboard()" class="px-4 py-2 bg-gray-500 text-white rounded-lg text-sm hover:bg-gray-600">← Voltar</button>
+                            <button onclick="toggleDarkMode()" class="px-4 py-2 bg-gray-300 dark:bg-gray-700 rounded-lg text-sm">🌙</button>
+                        </div>
+                    </div>
+
+                    <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow mb-6">
+                        <h2 class="text-lg font-semibold mb-4">📝 Nova Saída</h2>
+                        <form onsubmit="registrarSaida(event)" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="md:col-span-2">
+                                <label class="block text-sm font-medium mb-1">Selecione a Bobina *</label>
+                                <select id="sBobinaId" class="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white" required>
+                                    <option value="">Selecione uma bobina...</option>
+                                    ${disponiveis.map(b => `
+                                        <option value="${b.id}">#${b.id} - ${b.fabricante} - ${b.tipo} (${b.metragemInicial - b.metrosUsados}m disponíveis)</option>
+                                    `).join('')}
+                                </select>
+                                ${disponiveis.length === 0 ? '<p class="text-red-500 text-sm mt-1">⚠️ Nenhuma bobina disponível!</p>' : ''}
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium mb-1">🏢 Empresa *</label>
+                                <select id="sEquipe" class="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white" required>
+                                    <option value="">Selecione...</option>
+                                    <option value="Empresa Alpha">Empresa Alpha</option>
+                                    <option value="Empresa Beta">Empresa Beta</option>
+                                    <option value="Empresa Gama">Empresa Gama</option>
+                                    <option value="Empresa Delta">Empresa Delta</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium mb-1">👤 Técnico *</label>
+                                <input type="text" id="sFuncionario" placeholder="Nome do técnico" class="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white" required>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium mb-1">📋 Ordem de Serviço *</label>
+                                <input type="text" id="sOrdem" placeholder="OS-001" class="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white" required>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium mb-1">📏 Metros Utilizados (m) *</label>
+                                <input type="number" id="sMetros" placeholder="0" min="1" class="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white" required>
+                            </div>
+
+                            <div class="md:col-span-2">
+                                <label class="block text-sm font-medium mb-1">📝 Observação</label>
+                                <textarea id="sObservacao" rows="2" placeholder="Informações adicionais..." class="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white"></textarea>
+                            </div>
+
+                            <div class="md:col-span-2 flex gap-3">
+                                <button type="submit" class="flex-1 bg-orange-500 text-white font-bold py-3 rounded-lg hover:bg-orange-600" ${disponiveis.length === 0 ? 'disabled' : ''}>✅ Registrar Saída</button>
+                                <button type="reset" class="flex-1 bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-white font-bold py-3 rounded-lg">Limpar</button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow">
+                        <h2 class="text-lg font-semibold mb-4">📋 Histórico de Saídas</h2>
+                        ${movimentacoes.length === 0 ? '<p class="text-center text-gray-500 py-4">Nenhuma saída registrada.</p>' : `
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-sm">
+                                    <thead class="bg-gray-50 dark:bg-gray-700">
+                                        <tr>
+                                            <th class="px-4 py-2 text-left">Data</th>
+                                            <th class="px-4 py-2 text-left">Bobina</th>
+                                            <th class="px-4 py-2 text-left">Metros</th>
+                                            <th class="px-4 py-2 text-left">Empresa</th>
+                                            <th class="px-4 py-2 text-left">Técnico</th>
+                                            <th class="px-4 py-2 text-left">OS</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${movimentacoes.slice().reverse().map(m => `
+                                            <tr class="border-b dark:border-gray-700">
+                                                <td class="px-4 py-2">${m.data}</td>
+                                                <td class="px-4 py-2 font-medium">#${m.bobinaId}</td>
+                                                <td class="px-4 py-2 font-bold text-orange-600">${m.metrosUtilizados}m</td>
+                                                <td class="px-4 py-2">${m.equipe}</td>
+                                                <td class="px-4 py-2">${m.funcionario}</td>
+                                                <td class="px-4 py-2">${m.ordemServico}</td>
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        `}
+                    </div>
+                </div>
+            `;
+        }
+
         // ============================================
         // FUNÇÃO PARA REGISTRAR SAÍDA (ATUALIZADA)
         // ============================================
@@ -52,3 +492,29 @@
             
             showSaida();
         }
+
+        // ============================================
+        // FUNÇÕES GLOBAIS
+        // ============================================
+        function toggleDarkMode() {
+            document.documentElement.classList.toggle('dark');
+        }
+
+        function handleLogin(event) {
+            event.preventDefault();
+            const email = document.getElementById('email').value;
+            const senha = document.getElementById('senha').value;
+            if (email && senha) {
+                showDashboard();
+            } else {
+                alert('Preencha todos os campos!');
+            }
+        }
+
+        // ============================================
+        // INICIAR
+        // ============================================
+        showLogin();
+    </script>
+</body>
+</html>
