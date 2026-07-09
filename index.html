@@ -11,29 +11,124 @@
 
     <script>
         // ============================================
-        // DADOS INICIAIS - 15 BOBINAS
+        // CONFIGURAÇÃO DO SUPABASE
         // ============================================
-        let bobinas = [
-            { id: 1, localizacao: 'Depósito A - Prateleira 1', fabricante: 'Corning', lote: 'LOT-001', tipo: 'SMF-28', capacidade: 24, metragemInicial: 2000, metrosUsados: 150, status: 'Em uso' },
-            { id: 2, localizacao: 'Depósito B - Prateleira 3', fabricante: 'Prysmian', lote: 'LOT-002', tipo: 'G.652.D', capacidade: 48, metragemInicial: 3000, metrosUsados: 0, status: 'Nova' },
-            { id: 3, localizacao: 'Depósito A - Prateleira 2', fabricante: 'Furukawa', lote: 'LOT-003', tipo: 'G.655', capacidade: 12, metragemInicial: 1500, metrosUsados: 1500, status: 'Finalizada' },
-            { id: 4, localizacao: 'Depósito C - Prateleira 1', fabricante: 'Corning', lote: 'LOT-004', tipo: 'SMF-28e', capacidade: 48, metragemInicial: 2500, metrosUsados: 0, status: 'Nova' },
-            { id: 5, localizacao: 'Depósito A - Prateleira 4', fabricante: 'Prysmian', lote: 'LOT-005', tipo: 'G.657.A1', capacidade: 24, metragemInicial: 1800, metrosUsados: 300, status: 'Em uso' },
-            { id: 6, localizacao: 'Depósito B - Prateleira 2', fabricante: 'Furukawa', lote: 'LOT-006', tipo: 'G.652.D', capacidade: 96, metragemInicial: 4000, metrosUsados: 250, status: 'Em uso' },
-            { id: 7, localizacao: 'Depósito D - Prateleira 1', fabricante: 'Draka', lote: 'LOT-007', tipo: 'G.655', capacidade: 24, metragemInicial: 2000, metrosUsados: 0, status: 'Nova' },
-            { id: 8, localizacao: 'Depósito C - Prateleira 3', fabricante: 'Corning', lote: 'LOT-008', tipo: 'SMF-28', capacidade: 48, metragemInicial: 3000, metrosUsados: 2800, status: 'Em uso' },
-            { id: 9, localizacao: 'Depósito A - Prateleira 5', fabricante: 'Prysmian', lote: 'LOT-009', tipo: 'G.657.A2', capacidade: 12, metragemInicial: 1200, metrosUsados: 1200, status: 'Finalizada' },
-            { id: 10, localizacao: 'Depósito B - Prateleira 4', fabricante: 'Furukawa', lote: 'LOT-010', tipo: 'G.652.D', capacidade: 72, metragemInicial: 3500, metrosUsados: 100, status: 'Em uso' },
-            { id: 11, localizacao: 'Depósito D - Prateleira 2', fabricante: 'Draka', lote: 'LOT-011', tipo: 'SMF-28', capacidade: 24, metragemInicial: 2200, metrosUsados: 0, status: 'Nova' },
-            { id: 12, localizacao: 'Depósito C - Prateleira 2', fabricante: 'Corning', lote: 'LOT-012', tipo: 'G.655', capacidade: 48, metragemInicial: 2800, metrosUsados: 500, status: 'Em uso' },
-            { id: 13, localizacao: 'Depósito A - Prateleira 3', fabricante: 'Prysmian', lote: 'LOT-013', tipo: 'SMF-28e', capacidade: 96, metragemInicial: 4500, metrosUsados: 0, status: 'Nova' },
-            { id: 14, localizacao: 'Depósito B - Prateleira 1', fabricante: 'Furukawa', lote: 'LOT-014', tipo: 'G.657.A1', capacidade: 24, metragemInicial: 1600, metrosUsados: 900, status: 'Em uso' },
-            { id: 15, localizacao: 'Depósito D - Prateleira 3', fabricante: 'Draka', lote: 'LOT-015', tipo: 'G.652.D', capacidade: 48, metragemInicial: 3200, metrosUsados: 0, status: 'Nova' }
-        ];
+        const SUPABASE_URL = 'https://dibarwapqintkjvifkbm.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_Mm5CXywYX1pW7dbsqRyRFQ_gc-0jkcb';
 
+        // ============================================
+        // DADOS GLOBAIS
+        // ============================================
+        let bobinas = [];
         let movimentacoes = [];
-        let proximoId = 16;
+        let proximoId = 1;
         let filtroBusca = '';
+
+        // ============================================
+        // FUNÇÕES DO SUPABASE
+        // ============================================
+        async function carregarDados() {
+            try {
+                const responseBobinas = await fetch(`${SUPABASE_URL}/rest/v1/bobinas?select=*&order=id.asc`, {
+                    headers: {
+                        'apikey': SUPABASE_KEY,
+                        'Authorization': `Bearer ${SUPABASE_KEY}`
+                    }
+                });
+                bobinas = await responseBobinas.json();
+                
+                const responseMov = await fetch(`${SUPABASE_URL}/rest/v1/movimentacoes?select=*&order=id.asc`, {
+                    headers: {
+                        'apikey': SUPABASE_KEY,
+                        'Authorization': `Bearer ${SUPABASE_KEY}`
+                    }
+                });
+                movimentacoes = await responseMov.json();
+                
+                if (bobinas.length > 0) {
+                    proximoId = Math.max(...bobinas.map(b => b.id)) + 1;
+                }
+                
+                console.log('✅ Dados carregados:', bobinas.length, 'bobinas,', movimentacoes.length, 'movimentações');
+            } catch (error) {
+                console.error('❌ Erro ao carregar dados:', error);
+                alert('❌ Erro ao conectar com o banco de dados! Verifique sua internet.');
+            }
+        }
+
+        async function salvarBobinaBD(bobina) {
+            try {
+                const response = await fetch(`${SUPABASE_URL}/rest/v1/bobinas`, {
+                    method: 'POST',
+                    headers: {
+                        'apikey': SUPABASE_KEY,
+                        'Authorization': `Bearer ${SUPABASE_KEY}`,
+                        'Content-Type': 'application/json',
+                        'Prefer': 'return=representation'
+                    },
+                    body: JSON.stringify(bobina)
+                });
+                const data = await response.json();
+                return data[0];
+            } catch (error) {
+                console.error('❌ Erro ao salvar bobina:', error);
+                return null;
+            }
+        }
+
+        async function atualizarBobinaBD(id, dados) {
+            try {
+                const response = await fetch(`${SUPABASE_URL}/rest/v1/bobinas?id=eq.${id}`, {
+                    method: 'PATCH',
+                    headers: {
+                        'apikey': SUPABASE_KEY,
+                        'Authorization': `Bearer ${SUPABASE_KEY}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(dados)
+                });
+                return response.ok;
+            } catch (error) {
+                console.error('❌ Erro ao atualizar bobina:', error);
+                return false;
+            }
+        }
+
+        async function excluirBobinaBD(id) {
+            try {
+                const response = await fetch(`${SUPABASE_URL}/rest/v1/bobinas?id=eq.${id}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'apikey': SUPABASE_KEY,
+                        'Authorization': `Bearer ${SUPABASE_KEY}`
+                    }
+                });
+                return response.ok;
+            } catch (error) {
+                console.error('❌ Erro ao excluir bobina:', error);
+                return false;
+            }
+        }
+
+        async function salvarMovimentacaoBD(mov) {
+            try {
+                const response = await fetch(`${SUPABASE_URL}/rest/v1/movimentacoes`, {
+                    method: 'POST',
+                    headers: {
+                        'apikey': SUPABASE_KEY,
+                        'Authorization': `Bearer ${SUPABASE_KEY}`,
+                        'Content-Type': 'application/json',
+                        'Prefer': 'return=representation'
+                    },
+                    body: JSON.stringify(mov)
+                });
+                const data = await response.json();
+                return data[0];
+            } catch (error) {
+                console.error('❌ Erro ao salvar movimentação:', error);
+                return null;
+            }
+        }
 
         // ============================================
         // FUNÇÕES DE TELA
@@ -63,9 +158,9 @@
 
         function showDashboard() {
             const total = bobinas.length;
-            const metros = bobinas.reduce((t, b) => t + (b.metragemInicial - b.metrosUsados), 0);
-            const alerta = bobinas.filter(b => (b.metragemInicial - b.metrosUsados) < 1500 && (b.metragemInicial - b.metrosUsados) > 0).length;
-            const consumoDia = movimentacoes.filter(m => m.data === new Date().toLocaleDateString('pt-BR')).reduce((t, m) => t + m.metrosUtilizados, 0);
+            const metros = bobinas.reduce((t, b) => t + (b.metragem_inicial - b.metros_usados), 0);
+            const alerta = bobinas.filter(b => (b.metragem_inicial - b.metros_usados) < 1500 && (b.metragem_inicial - b.metros_usados) > 0).length;
+            const consumoDia = movimentacoes.filter(m => m.data === new Date().toLocaleDateString('pt-BR')).reduce((t, m) => t + m.metros_utilizados, 0);
 
             document.getElementById('root').innerHTML = `
                 <div class="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 md:p-6">
@@ -106,8 +201,8 @@
                         <h2 class="text-lg font-semibold text-gray-800 dark:text-white mb-4">📋 Últimas Movimentações</h2>
                         ${movimentacoes.length === 0 ? '<p class="text-center text-gray-500 dark:text-gray-400 py-4">Nenhuma movimentação registrada.</p>' : 
                             movimentacoes.slice(-5).reverse().map(m => {
-                                const bobina = bobinas.find(b => b.id === m.bobinaId);
-                                const nomeBobina = bobina ? `${bobina.fabricante} - ${bobina.lote} - ${bobina.tipo}` : '#' + m.bobinaId;
+                                const bobina = bobinas.find(b => b.id === m.bobina_id);
+                                const nomeBobina = bobina ? `${bobina.fabricante} - ${bobina.lote} - ${bobina.tipo}` : '#' + m.bobina_id;
                                 return `
                                     <div class="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-700 rounded-lg mb-2">
                                         <div>
@@ -115,7 +210,7 @@
                                             <span class="text-sm text-gray-500 dark:text-gray-400 ml-2">${m.equipe}</span>
                                         </div>
                                         <div class="text-right">
-                                            <span class="font-bold text-orange-600">-${m.metrosUtilizados}m</span>
+                                            <span class="font-bold text-orange-600">-${m.metros_utilizados}m</span>
                                             <span class="text-xs text-gray-500 dark:text-gray-400 block">${m.data}</span>
                                         </div>
                                     </div>
@@ -129,43 +224,499 @@
         }
 
         // ============================================
+        // TELA DE BOBINAS
+        // ============================================
+        function showBobinas() {
+            let lista = bobinas;
+            if (filtroBusca.trim()) {
+                const termo = filtroBusca.toLowerCase();
+                lista = bobinas.filter(b => 
+                    b.id.toString().includes(termo) ||
+                    b.localizacao.toLowerCase().includes(termo) ||
+                    b.fabricante.toLowerCase().includes(termo) ||
+                    b.lote.toLowerCase().includes(termo) ||
+                    b.tipo.toLowerCase().includes(termo) ||
+                    b.status.toLowerCase().includes(termo)
+                );
+            }
+
+            document.getElementById('root').innerHTML = `
+                <div class="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 md:p-6">
+                    <div class="flex flex-wrap justify-between items-center mb-6">
+                        <div>
+                            <h1 class="text-2xl font-bold text-gray-800 dark:text-white">📦 Bobinas</h1>
+                            <p class="text-gray-500 dark:text-gray-400">${lista.length} bobina(s) encontrada(s)</p>
+                        </div>
+                        <div class="flex flex-wrap gap-2 mt-3 md:mt-0">
+                            <button onclick="showFormBobina()" class="px-4 py-2 bg-blue-500 text-white rounded-lg text-sm hover:bg-blue-600">➕ Nova</button>
+                            <button onclick="showDashboard()" class="px-4 py-2 bg-gray-500 text-white rounded-lg text-sm hover:bg-gray-600">← Voltar</button>
+                            <button onclick="toggleDarkMode()" class="px-4 py-2 bg-gray-300 dark:bg-gray-700 rounded-lg text-sm">🌙</button>
+                        </div>
+                    </div>
+
+                    <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow mb-6">
+                        <div class="flex gap-3">
+                            <div class="flex-1 relative">
+                                <span class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">🔍</span>
+                                <input type="text" id="buscaInput" value="${filtroBusca}" oninput="filtrarBobinas(this.value)" placeholder="Buscar..." class="w-full pl-10 pr-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white">
+                            </div>
+                            <button onclick="limparBusca()" class="px-4 py-2 bg-gray-300 dark:bg-gray-600 rounded-lg">Limpar</button>
+                        </div>
+                    </div>
+
+                    <div class="bg-white dark:bg-gray-800 rounded-xl shadow overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead class="bg-gray-50 dark:bg-gray-700">
+                                <tr>
+                                    <th class="px-4 py-2 text-left">ID</th>
+                                    <th class="px-4 py-2 text-left">Localização</th>
+                                    <th class="px-4 py-2 text-left">Fabricante</th>
+                                    <th class="px-4 py-2 text-left">Lote</th>
+                                    <th class="px-4 py-2 text-left">Tipo</th>
+                                    <th class="px-4 py-2 text-left">Capacidade</th>
+                                    <th class="px-4 py-2 text-left">Inicial</th>
+                                    <th class="px-4 py-2 text-left">Usados</th>
+                                    <th class="px-4 py-2 text-left">Restante</th>
+                                    <th class="px-4 py-2 text-left">Status</th>
+                                    <th class="px-4 py-2 text-left">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${lista.length === 0 ? `
+                                    <tr><td colspan="11" class="text-center py-8 text-gray-500">Nenhuma bobina encontrada</td></tr>
+                                ` : lista.map(b => `
+                                    <tr class="border-b dark:border-gray-700">
+                                        <td class="px-4 py-2 font-medium">#${b.id}</td>
+                                        <td class="px-4 py-2">${b.localizacao}</td>
+                                        <td class="px-4 py-2">${b.fabricante}</td>
+                                        <td class="px-4 py-2">${b.lote}</td>
+                                        <td class="px-4 py-2">${b.tipo}</td>
+                                        <td class="px-4 py-2">${b.capacidade} FO</td>
+                                        <td class="px-4 py-2">${b.metragem_inicial}m</td>
+                                        <td class="px-4 py-2">${b.metros_usados}m</td>
+                                        <td class="px-4 py-2">${b.metragem_inicial - b.metros_usados}m</td>
+                                        <td class="px-4 py-2">
+                                            <span class="px-2 py-1 rounded-full text-xs ${b.status === 'Nova' ? 'bg-green-100 text-green-700' : b.status === 'Em uso' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700'}">${b.status}</span>
+                                        </td>
+                                        <td class="px-4 py-2">
+                                            <button onclick="editarBobina(${b.id})" class="text-blue-600 mr-2">✏️</button>
+                                            <button onclick="excluirBobina(${b.id})" class="text-red-600">🗑️</button>
+                                        </td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="mt-4 grid grid-cols-5 gap-2 text-center">
+                        <div class="bg-white dark:bg-gray-800 rounded-lg p-2"><p class="text-xs text-gray-500">Total</p><p class="font-bold">${bobinas.length}</p></div>
+                        <div class="bg-white dark:bg-gray-800 rounded-lg p-2"><p class="text-xs text-gray-500">Novas</p><p class="font-bold text-green-600">${bobinas.filter(b => b.status === 'Nova').length}</p></div>
+                        <div class="bg-white dark:bg-gray-800 rounded-lg p-2"><p class="text-xs text-gray-500">Em Uso</p><p class="font-bold text-blue-600">${bobinas.filter(b => b.status === 'Em uso').length}</p></div>
+                        <div class="bg-white dark:bg-gray-800 rounded-lg p-2"><p class="text-xs text-gray-500">Finalizadas</p><p class="font-bold text-gray-600">${bobinas.filter(b => b.status === 'Finalizada').length}</p></div>
+                        <div class="bg-white dark:bg-gray-800 rounded-lg p-2"><p class="text-xs text-gray-500">Filtradas</p><p class="font-bold text-orange-600">${lista.length}</p></div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // ============================================
+        // FORMULÁRIO DE BOBINA
+        // ============================================
+        function showFormBobina(id = null) {
+            const editando = id !== null;
+            const b = editando ? bobinas.find(x => x.id === id) : null;
+            if (editando && !b) { alert('Bobina não encontrada!'); showBobinas(); return; }
+
+            const titulo = editando ? '✏️ Editar' : '➕ Nova Bobina';
+            const botao = editando ? 'Atualizar' : 'Cadastrar';
+
+            document.getElementById('root').innerHTML = `
+                <div class="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 md:p-6 flex items-center justify-center">
+                    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-2xl p-8">
+                        <div class="flex justify-between items-center mb-6">
+                            <h2 class="text-2xl font-bold text-gray-800 dark:text-white">${titulo}</h2>
+                            <button onclick="showBobinas()" class="text-2xl text-gray-500">✕</button>
+                        </div>
+                        <form onsubmit="salvarBobina(event)">
+                            <input type="hidden" id="editId" value="${editando ? id : ''}">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div class="md:col-span-2">
+                                    <label class="block text-sm font-medium mb-1">📍 Localização</label>
+                                    <input type="text" id="fLocalizacao" value="${editando ? b.localizacao : ''}" class="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white" required>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">🏭 Fabricante</label>
+                                    <input type="text" id="fFabricante" value="${editando ? b.fabricante : ''}" class="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white" required>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">📦 Lote</label>
+                                    <input type="text" id="fLote" value="${editando ? b.lote : ''}" class="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white" required>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">🔷 Tipo</label>
+                                    <input type="text" id="fTipo" value="${editando ? b.tipo : ''}" class="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white" required>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">📊 Capacidade (FO)</label>
+                                    <input type="number" id="fCapacidade" value="${editando ? b.capacidade : ''}" class="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white" required>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">📏 Metragem Inicial (m)</label>
+                                    <input type="number" id="fMetragemInicial" value="${editando ? b.metragem_inicial : ''}" class="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white" required>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">📉 Metros Usados (m)</label>
+                                    <input type="number" id="fMetrosUsados" value="${editando ? b.metros_usados : ''}" class="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white" required>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">📌 Status</label>
+                                    <select id="fStatus" class="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white">
+                                        <option value="Nova" ${editando && b.status === 'Nova' ? 'selected' : ''}>Nova</option>
+                                        <option value="Em uso" ${editando && b.status === 'Em uso' ? 'selected' : ''}>Em uso</option>
+                                        <option value="Finalizada" ${editando && b.status === 'Finalizada' ? 'selected' : ''}>Finalizada</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="mt-4 p-3 bg-gray-100 dark:bg-gray-700 rounded-lg">
+                                <p class="text-sm">📊 <strong>Metragem Restante:</strong> <span class="text-blue-600 font-bold">${editando ? b.metragem_inicial - b.metros_usados : 0}m</span></p>
+                            </div>
+                            <div class="flex gap-3 mt-6">
+                                <button type="submit" class="flex-1 bg-blue-500 text-white font-bold py-3 rounded-lg hover:bg-blue-600">${botao}</button>
+                                <button type="button" onclick="showBobinas()" class="flex-1 bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-white font-bold py-3 rounded-lg">Cancelar</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            `;
+        }
+
+        // ============================================
+        // FUNÇÕES CRUD (COM BANCO DE DADOS)
+        // ============================================
+        async function salvarBobina(event) {
+            event.preventDefault();
+            const id = document.getElementById('editId').value;
+            const localizacao = document.getElementById('fLocalizacao').value;
+            const fabricante = document.getElementById('fFabricante').value;
+            const lote = document.getElementById('fLote').value;
+            const tipo = document.getElementById('fTipo').value;
+            const capacidade = parseFloat(document.getElementById('fCapacidade').value);
+            const metragemInicial = parseFloat(document.getElementById('fMetragemInicial').value);
+            const metrosUsados = parseFloat(document.getElementById('fMetrosUsados').value);
+            const status = document.getElementById('fStatus').value;
+
+            if (metrosUsados > metragemInicial) {
+                alert('❌ Metros usados não podem ser maiores que a metragem inicial!');
+                return;
+            }
+
+            const dados = {
+                localizacao,
+                fabricante,
+                lote,
+                tipo,
+                capacidade,
+                metragem_inicial: metragemInicial,
+                metros_usados: metrosUsados,
+                status
+            };
+
+            if (id) {
+                const sucesso = await atualizarBobinaBD(parseInt(id), dados);
+                if (sucesso) {
+                    const index = bobinas.findIndex(b => b.id === parseInt(id));
+                    if (index !== -1) {
+                        bobinas[index] = { ...bobinas[index], ...dados };
+                    }
+                    alert('✅ Bobina atualizada!');
+                } else {
+                    alert('❌ Erro ao atualizar bobina!');
+                }
+            } else {
+                const nova = await salvarBobinaBD(dados);
+                if (nova) {
+                    bobinas.push(nova);
+                    proximoId = Math.max(...bobinas.map(b => b.id)) + 1;
+                    alert('✅ Bobina cadastrada!');
+                } else {
+                    alert('❌ Erro ao cadastrar bobina!');
+                }
+            }
+            showBobinas();
+        }
+
+        async function editarBobina(id) { showFormBobina(id); }
+
+        async function excluirBobina(id) {
+            if (confirm('⚠️ Tem certeza?')) {
+                const sucesso = await excluirBobinaBD(id);
+                if (sucesso) {
+                    bobinas = bobinas.filter(b => b.id !== id);
+                    alert('🗑️ Bobina excluída!');
+                } else {
+                    alert('❌ Erro ao excluir bobina!');
+                }
+                showBobinas();
+            }
+        }
+
+        function filtrarBobinas(termo) {
+            filtroBusca = termo;
+            showBobinas();
+        }
+
+        function limparBusca() {
+            filtroBusca = '';
+            document.getElementById('buscaInput').value = '';
+            showBobinas();
+        }
+
+        // ============================================
+        // TELA DE SAÍDA
+        // ============================================
+        function showSaida() {
+            const disponiveis = bobinas.filter(b => (b.metragem_inicial - b.metros_usados) > 0);
+
+            document.getElementById('root').innerHTML = `
+                <div class="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 md:p-6">
+                    <div class="flex flex-wrap justify-between items-center mb-6">
+                        <div>
+                            <h1 class="text-2xl font-bold text-gray-800 dark:text-white">📤 Registrar Saída</h1>
+                            <p class="text-gray-500 dark:text-gray-400">Registre o consumo de metros das bobinas</p>
+                        </div>
+                        <div class="flex gap-2 mt-3 md:mt-0">
+                            <button onclick="showDashboard()" class="px-4 py-2 bg-gray-500 text-white rounded-lg text-sm hover:bg-gray-600">← Voltar</button>
+                            <button onclick="toggleDarkMode()" class="px-4 py-2 bg-gray-300 dark:bg-gray-700 rounded-lg text-sm">🌙</button>
+                        </div>
+                    </div>
+
+                    <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow mb-6">
+                        <h2 class="text-lg font-semibold mb-4">📝 Nova Saída</h2>
+                        <form onsubmit="registrarSaida(event)" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="md:col-span-2">
+                                <label class="block text-sm font-medium mb-1">Selecione a Bobina *</label>
+                                <select id="sBobinaId" class="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white" required>
+                                    <option value="">Selecione uma bobina...</option>
+                                    ${disponiveis.map(b => `
+                                        <option value="${b.id}">${b.fabricante} - ${b.lote} - ${b.tipo} (${b.metragem_inicial - b.metros_usados}m disponíveis)</option>
+                                    `).join('')}
+                                </select>
+                                ${disponiveis.length === 0 ? '<p class="text-red-500 text-sm mt-1">⚠️ Nenhuma bobina disponível!</p>' : ''}
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium mb-1">🏢 Empresa *</label>
+                                <input type="text" id="sEquipe" placeholder="Digite o nome da empresa" class="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white" required>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium mb-1">👤 Técnico *</label>
+                                <input type="text" id="sFuncionario" placeholder="Nome do técnico" class="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white" required>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium mb-1">📋 Ordem de Serviço (opcional)</label>
+                                <input type="text" id="sOrdem" placeholder="OS-001 (opcional)" class="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white">
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium mb-1">📏 Metros Utilizados (m) (opcional)</label>
+                                <input type="number" id="sMetros" placeholder="0 (opcional)" min="0" class="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white">
+                            </div>
+
+                            <div class="md:col-span-2">
+                                <label class="block text-sm font-medium mb-1">📝 Observação</label>
+                                <textarea id="sObservacao" rows="2" placeholder="Informações adicionais..." class="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white"></textarea>
+                            </div>
+
+                            <div class="md:col-span-2 flex gap-3">
+                                <button type="submit" class="flex-1 bg-orange-500 text-white font-bold py-3 rounded-lg hover:bg-orange-600" ${disponiveis.length === 0 ? 'disabled' : ''}>✅ Registrar Saída</button>
+                                <button type="reset" class="flex-1 bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-white font-bold py-3 rounded-lg">Limpar</button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow">
+                        <h2 class="text-lg font-semibold mb-4">📋 Histórico de Saídas</h2>
+                        ${movimentacoes.length === 0 ? '<p class="text-center text-gray-500 py-4">Nenhuma saída registrada.</p>' : `
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-sm">
+                                    <thead class="bg-gray-50 dark:bg-gray-700">
+                                        <tr>
+                                            <th class="px-4 py-2 text-left">Data</th>
+                                            <th class="px-4 py-2 text-left">Bobina</th>
+                                            <th class="px-4 py-2 text-left">Metros</th>
+                                            <th class="px-4 py-2 text-left">Empresa</th>
+                                            <th class="px-4 py-2 text-left">Técnico</th>
+                                            <th class="px-4 py-2 text-left">OS</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${movimentacoes.slice().reverse().map(m => {
+                                            const bobina = bobinas.find(b => b.id === m.bobina_id);
+                                            const nomeBobina = bobina ? `${bobina.fabricante} - ${bobina.lote} - ${bobina.tipo}` : '#' + m.bobina_id;
+                                            return `
+                                                <tr class="border-b dark:border-gray-700">
+                                                    <td class="px-4 py-2">${m.data}</td>
+                                                    <td class="px-4 py-2 font-medium">${nomeBobina}</td>
+                                                    <td class="px-4 py-2 font-bold text-orange-600">${m.metros_utilizados}m</td>
+                                                    <td class="px-4 py-2">${m.equipe}</td>
+                                                    <td class="px-4 py-2">${m.funcionario}</td>
+                                                    <td class="px-4 py-2">${m.ordem_servico || '-'}</td>
+                                                </tr>
+                                            `;
+                                        }).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        `}
+                    </div>
+                </div>
+            `;
+        }
+
+        // ============================================
+        // FUNÇÃO PARA REGISTRAR SAÍDA (COM BANCO)
+        // ============================================
+        async function registrarSaida(event) {
+            event.preventDefault();
+            
+            const bobinaId = parseInt(document.getElementById('sBobinaId').value);
+            const equipe = document.getElementById('sEquipe').value;
+            const funcionario = document.getElementById('sFuncionario').value;
+            const ordem = document.getElementById('sOrdem').value;
+            const metros = parseFloat(document.getElementById('sMetros').value) || 0;
+            const obs = document.getElementById('sObservacao').value;
+
+            if (!bobinaId) { 
+                alert('❌ Selecione uma bobina!'); 
+                return; 
+            }
+            
+            if (!equipe.trim()) { 
+                alert('❌ Digite o nome da empresa!'); 
+                return; 
+            }
+            
+            if (!funcionario.trim()) { 
+                alert('❌ Digite o nome do técnico!'); 
+                return; 
+            }
+            
+            const bobina = bobinas.find(b => b.id === bobinaId);
+            if (!bobina) { 
+                alert('❌ Bobina não encontrada!'); 
+                return; 
+            }
+
+            const disponivel = bobina.metragem_inicial - bobina.metros_usados;
+            
+            if (metros === 0) {
+                if (!confirm(`⚠️ Você está registrando 0 metros para a bobina ${bobina.fabricante} - ${bobina.lote} - ${bobina.tipo}.\n\nDeseja continuar?`)) {
+                    return;
+                }
+            }
+            
+            if (metros < 0) { 
+                alert('❌ Os metros não podem ser negativos!'); 
+                return; 
+            }
+
+            if (metros > disponivel) { 
+                alert(`❌ Disponível: ${disponivel}m`); 
+                return; 
+            }
+
+            const novosMetrosUsados = bobina.metros_usados + metros;
+            let novoStatus = bobina.status;
+            const restante = bobina.metragem_inicial - novosMetrosUsados;
+            
+            if (restante === 0) {
+                novoStatus = 'Finalizada';
+            } else if (novosMetrosUsados > 0) {
+                novoStatus = 'Em uso';
+            }
+
+            const sucesso = await atualizarBobinaBD(bobinaId, {
+                metros_usados: novosMetrosUsados,
+                status: novoStatus
+            });
+
+            if (!sucesso) {
+                alert('❌ Erro ao atualizar bobina!');
+                return;
+            }
+
+            bobina.metros_usados = novosMetrosUsados;
+            bobina.status = novoStatus;
+
+            const now = new Date();
+            const mov = {
+                bobina_id: bobinaId,
+                equipe: equipe,
+                funcionario: funcionario,
+                ordem_servico: ordem || null,
+                metros_utilizados: metros,
+                observacao: obs || null,
+                data: now.toLocaleDateString('pt-BR'),
+                hora: now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+            };
+
+            const novaMov = await salvarMovimentacaoBD(mov);
+            if (novaMov) {
+                movimentacoes.push(novaMov);
+            }
+
+            alert(`✅ Saída registrada!\n📏 ${metros}m utilizados\n📦 Restante: ${restante}m`);
+            
+            document.getElementById('sBobinaId').value = '';
+            document.getElementById('sEquipe').value = '';
+            document.getElementById('sFuncionario').value = '';
+            document.getElementById('sOrdem').value = '';
+            document.getElementById('sMetros').value = '';
+            document.getElementById('sObservacao').value = '';
+            
+            showSaida();
+        }
+
+        // ============================================
         // TELA DE RELATÓRIOS
         // ============================================
         function showRelatorios() {
             const totalBobinas = bobinas.length;
-            const totalMetros = bobinas.reduce((t, b) => t + (b.metragemInicial - b.metrosUsados), 0);
-            const totalConsumido = bobinas.reduce((t, b) => t + b.metrosUsados, 0);
+            const totalMetros = bobinas.reduce((t, b) => t + (b.metragem_inicial - b.metros_usados), 0);
+            const totalConsumido = bobinas.reduce((t, b) => t + b.metros_usados, 0);
             
             const empresas = {};
             movimentacoes.forEach(m => {
                 if (empresas[m.equipe]) {
-                    empresas[m.equipe] += m.metrosUtilizados;
+                    empresas[m.equipe] += m.metros_utilizados;
                 } else {
-                    empresas[m.equipe] = m.metrosUtilizados;
+                    empresas[m.equipe] = m.metros_utilizados;
                 }
             });
             
             const tecnicos = {};
             movimentacoes.forEach(m => {
                 if (tecnicos[m.funcionario]) {
-                    tecnicos[m.funcionario] += m.metrosUtilizados;
+                    tecnicos[m.funcionario] += m.metros_utilizados;
                 } else {
-                    tecnicos[m.funcionario] = m.metrosUtilizados;
+                    tecnicos[m.funcionario] = m.metros_utilizados;
                 }
             });
             
             const consumoBobinas = {};
             movimentacoes.forEach(m => {
-                const bobina = bobinas.find(b => b.id === m.bobinaId);
-                const nomeBobina = bobina ? `${bobina.fabricante} - ${bobina.lote} - ${bobina.tipo}` : '#' + m.bobinaId;
+                const bobina = bobinas.find(b => b.id === m.bobina_id);
+                const nomeBobina = bobina ? `${bobina.fabricante} - ${bobina.lote} - ${bobina.tipo}` : '#' + m.bobina_id;
                 if (consumoBobinas[nomeBobina]) {
-                    consumoBobinas[nomeBobina] += m.metrosUtilizados;
+                    consumoBobinas[nomeBobina] += m.metros_utilizados;
                 } else {
-                    consumoBobinas[nomeBobina] = m.metrosUtilizados;
+                    consumoBobinas[nomeBobina] = m.metros_utilizados;
                 }
             });
             
-            const estoqueBaixo = bobinas.filter(b => (b.metragemInicial - b.metrosUsados) < 1500 && (b.metragemInicial - b.metrosUsados) > 0);
+            const estoqueBaixo = bobinas.filter(b => (b.metragem_inicial - b.metros_usados) < 1500 && (b.metragem_inicial - b.metros_usados) > 0);
             
             const statusNova = bobinas.filter(b => b.status === 'Nova').length;
             const statusEmUso = bobinas.filter(b => b.status === 'Em uso').length;
@@ -193,7 +744,7 @@
             const listaEstoqueBaixo = estoqueBaixo.map(b => `
                 <div class="flex justify-between items-center p-2 bg-red-50 dark:bg-red-900/30 rounded-lg mb-1">
                     <span class="text-sm font-medium text-gray-800 dark:text-white">${b.fabricante} - ${b.lote} - ${b.tipo}</span>
-                    <span class="text-sm font-bold text-red-600">${b.metragemInicial - b.metrosUsados}m</span>
+                    <span class="text-sm font-bold text-red-600">${b.metragem_inicial - b.metros_usados}m</span>
                 </div>
             `).join('');
 
@@ -317,16 +868,16 @@
                                     </thead>
                                     <tbody>
                                         ${movimentacoes.slice().reverse().map(m => {
-                                            const bobina = bobinas.find(b => b.id === m.bobinaId);
-                                            const nomeBobina = bobina ? `${bobina.fabricante} - ${bobina.lote} - ${bobina.tipo}` : '#' + m.bobinaId;
+                                            const bobina = bobinas.find(b => b.id === m.bobina_id);
+                                            const nomeBobina = bobina ? `${bobina.fabricante} - ${bobina.lote} - ${bobina.tipo}` : '#' + m.bobina_id;
                                             return `
                                                 <tr class="border-b dark:border-gray-700">
                                                     <td class="px-4 py-2">${m.data}</td>
                                                     <td class="px-4 py-2 font-medium">${nomeBobina}</td>
-                                                    <td class="px-4 py-2 font-bold text-orange-600">${m.metrosUtilizados}m</td>
+                                                    <td class="px-4 py-2 font-bold text-orange-600">${m.metros_utilizados}m</td>
                                                     <td class="px-4 py-2">${m.equipe}</td>
                                                     <td class="px-4 py-2">${m.funcionario}</td>
-                                                    <td class="px-4 py-2">${m.ordemServico || '-'}</td>
+                                                    <td class="px-4 py-2">${m.ordem_servico || '-'}</td>
                                                 </tr>
                                             `;
                                         }).join('')}
@@ -340,7 +891,7 @@
         }
 
         // ============================================
-        // EXPORTAÇÃO EXCEL (CORRIGIDA - HTML TABLE)
+        // EXPORTAÇÃO EXCEL
         // ============================================
         function exportarExcel() {
             if (movimentacoes.length === 0) {
@@ -372,7 +923,6 @@
                     table { border-collapse: collapse; width: 100%; }
                     th { background-color: #4F46E5; color: white; padding: 8px; border: 1px solid #000; }
                     td { padding: 8px; border: 1px solid #ccc; }
-                    .header { background-color: #e9ecef; font-weight: bold; }
                 </style>
             </head>
             <body>
@@ -394,16 +944,16 @@
             `;
 
             movimentacoes.forEach(m => {
-                const bobina = bobinas.find(b => b.id === m.bobinaId);
-                const nomeBobina = bobina ? `${bobina.fabricante} - ${bobina.lote} - ${bobina.tipo}` : '#' + m.bobinaId;
+                const bobina = bobinas.find(b => b.id === m.bobina_id);
+                const nomeBobina = bobina ? `${bobina.fabricante} - ${bobina.lote} - ${bobina.tipo}` : '#' + m.bobina_id;
                 html += `
                         <tr>
                             <td>${m.data}</td>
                             <td>${nomeBobina}</td>
-                            <td>${m.metrosUtilizados}</td>
+                            <td>${m.metros_utilizados}</td>
                             <td>${m.equipe}</td>
                             <td>${m.funcionario}</td>
-                            <td>${m.ordemServico || '-'}</td>
+                            <td>${m.ordem_servico || '-'}</td>
                         </tr>
                 `;
             });
@@ -415,7 +965,7 @@
                 <p><strong>Resumo:</strong></p>
                 <ul>
                     <li>Total de Movimentações: ${movimentacoes.length}</li>
-                    <li>Total de Metros Consumidos: ${movimentacoes.reduce((t, m) => t + m.metrosUtilizados, 0)}m</li>
+                    <li>Total de Metros Consumidos: ${movimentacoes.reduce((t, m) => t + m.metros_utilizados, 0)}m</li>
                 </ul>
             </body>
             </html>
@@ -428,11 +978,11 @@
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
-            alert('✅ Relatório exportado com sucesso!\n\n📌 O arquivo será aberto diretamente no Excel com as colunas separadas!');
+            alert('✅ Relatório exportado com sucesso!');
         }
 
         // ============================================
-        // EXPORTAÇÃO PDF (CORRIGIDA)
+        // EXPORTAÇÃO PDF
         // ============================================
         function exportarPDF() {
             if (movimentacoes.length === 0) {
@@ -447,117 +997,28 @@
                 <meta charset="UTF-8">
                 <title>Relatório FiberManager</title>
                 <style>
-                    body { 
-                        font-family: Arial, sans-serif; 
-                        margin: 40px; 
-                        color: #333;
-                    }
-                    .header {
-                        text-align: center;
-                        border-bottom: 3px solid #4F46E5;
-                        padding-bottom: 20px;
-                        margin-bottom: 30px;
-                    }
-                    .header h1 {
-                        color: #4F46E5;
-                        font-size: 28px;
-                        margin: 0;
-                    }
-                    .header p {
-                        color: #666;
-                        font-size: 14px;
-                        margin: 5px 0 0 0;
-                    }
-                    .info-grid {
-                        display: grid;
-                        grid-template-columns: repeat(4, 1fr);
-                        gap: 15px;
-                        margin-bottom: 30px;
-                    }
-                    .info-card {
-                        background: #f8f9fa;
-                        padding: 15px;
-                        border-radius: 8px;
-                        text-align: center;
-                        border: 1px solid #e9ecef;
-                    }
-                    .info-card .label {
-                        font-size: 12px;
-                        color: #666;
-                        margin-bottom: 5px;
-                    }
-                    .info-card .value {
-                        font-size: 20px;
-                        font-weight: bold;
-                        color: #1a1a2e;
-                    }
+                    body { font-family: Arial, sans-serif; margin: 40px; color: #333; }
+                    .header { text-align: center; border-bottom: 3px solid #4F46E5; padding-bottom: 20px; margin-bottom: 30px; }
+                    .header h1 { color: #4F46E5; font-size: 28px; margin: 0; }
+                    .header p { color: #666; font-size: 14px; margin: 5px 0 0 0; }
+                    .info-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 30px; }
+                    .info-card { background: #f8f9fa; padding: 15px; border-radius: 8px; text-align: center; border: 1px solid #e9ecef; }
+                    .info-card .label { font-size: 12px; color: #666; margin-bottom: 5px; }
+                    .info-card .value { font-size: 20px; font-weight: bold; color: #1a1a2e; }
                     .info-card .value.orange { color: #f97316; }
                     .info-card .value.green { color: #22c55e; }
                     .info-card .value.red { color: #ef4444; }
-                    
-                    .section-title {
-                        font-size: 18px;
-                        font-weight: bold;
-                        color: #1a1a2e;
-                        border-bottom: 2px solid #e9ecef;
-                        padding-bottom: 10px;
-                        margin-top: 30px;
-                        margin-bottom: 15px;
-                    }
-                    
-                    table {
-                        width: 100%;
-                        border-collapse: collapse;
-                        font-size: 13px;
-                    }
-                    th {
-                        background: #4F46E5;
-                        color: white;
-                        padding: 10px 12px;
-                        text-align: left;
-                    }
-                    td {
-                        padding: 8px 12px;
-                        border-bottom: 1px solid #e9ecef;
-                    }
-                    tr:nth-child(even) {
-                        background: #f8f9fa;
-                    }
-                    
-                    .footer {
-                        text-align: center;
-                        color: #999;
-                        font-size: 12px;
-                        margin-top: 40px;
-                        padding-top: 20px;
-                        border-top: 1px solid #e9ecef;
-                    }
-                    
-                    .alert-box {
-                        background: #fef2f2;
-                        border: 1px solid #fecaca;
-                        border-radius: 8px;
-                        padding: 15px;
-                        margin-top: 15px;
-                    }
-                    .alert-box .alert-item {
-                        display: flex;
-                        justify-content: space-between;
-                        padding: 5px 0;
-                        border-bottom: 1px solid #fecaca;
-                    }
-                    .alert-box .alert-item:last-child {
-                        border-bottom: none;
-                    }
-                    .alert-box .alert-item .metros {
-                        font-weight: bold;
-                        color: #dc2626;
-                    }
-                    
-                    @media print {
-                        body { margin: 20px; }
-                        .no-print { display: none; }
-                    }
+                    .section-title { font-size: 18px; font-weight: bold; color: #1a1a2e; border-bottom: 2px solid #e9ecef; padding-bottom: 10px; margin-top: 30px; margin-bottom: 15px; }
+                    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+                    th { background: #4F46E5; color: white; padding: 10px 12px; text-align: left; }
+                    td { padding: 8px 12px; border-bottom: 1px solid #e9ecef; }
+                    tr:nth-child(even) { background: #f8f9fa; }
+                    .footer { text-align: center; color: #999; font-size: 12px; margin-top: 40px; padding-top: 20px; border-top: 1px solid #e9ecef; }
+                    .alert-box { background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 15px; margin-top: 15px; }
+                    .alert-box .alert-item { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #fecaca; }
+                    .alert-box .alert-item:last-child { border-bottom: none; }
+                    .alert-box .alert-item .metros { font-weight: bold; color: #dc2626; }
+                    @media print { body { margin: 20px; } .no-print { display: none; } }
                 </style>
             </head>
             <body>
@@ -569,31 +1030,19 @@
             `;
 
             const totalBobinas = bobinas.length;
-            const totalMetros = bobinas.reduce((t, b) => t + (b.metragemInicial - b.metrosUsados), 0);
-            const totalConsumido = bobinas.reduce((t, b) => t + b.metrosUsados, 0);
+            const totalMetros = bobinas.reduce((t, b) => t + (b.metragem_inicial - b.metros_usados), 0);
+            const totalConsumido = bobinas.reduce((t, b) => t + b.metros_usados, 0);
             
             html += `
                 <div class="info-grid">
-                    <div class="info-card">
-                        <div class="label">📦 Total Bobinas</div>
-                        <div class="value">${totalBobinas}</div>
-                    </div>
-                    <div class="info-card">
-                        <div class="label">📏 Metros Disponíveis</div>
-                        <div class="value green">${totalMetros}m</div>
-                    </div>
-                    <div class="info-card">
-                        <div class="label">📉 Total Consumido</div>
-                        <div class="value orange">${totalConsumido}m</div>
-                    </div>
-                    <div class="info-card">
-                        <div class="label">📋 Movimentações</div>
-                        <div class="value">${movimentacoes.length}</div>
-                    </div>
+                    <div class="info-card"><div class="label">📦 Total Bobinas</div><div class="value">${totalBobinas}</div></div>
+                    <div class="info-card"><div class="label">📏 Metros Disponíveis</div><div class="value green">${totalMetros}m</div></div>
+                    <div class="info-card"><div class="label">📉 Total Consumido</div><div class="value orange">${totalConsumido}m</div></div>
+                    <div class="info-card"><div class="label">📋 Movimentações</div><div class="value">${movimentacoes.length}</div></div>
                 </div>
             `;
 
-            const estoqueBaixo = bobinas.filter(b => (b.metragemInicial - b.metrosUsados) < 1500 && (b.metragemInicial - b.metrosUsados) > 0);
+            const estoqueBaixo = bobinas.filter(b => (b.metragem_inicial - b.metros_usados) < 1500 && (b.metragem_inicial - b.metros_usados) > 0);
             if (estoqueBaixo.length > 0) {
                 html += `
                     <div class="section-title">⚠️ Estoque Baixo (&lt; 1500m)</div>
@@ -601,7 +1050,7 @@
                         ${estoqueBaixo.map(b => `
                             <div class="alert-item">
                                 <span>${b.fabricante} - ${b.lote} - ${b.tipo}</span>
-                                <span class="metros">${b.metragemInicial - b.metrosUsados}m</span>
+                                <span class="metros">${b.metragem_inicial - b.metros_usados}m</span>
                             </div>
                         `).join('')}
                     </div>
@@ -611,30 +1060,21 @@
             html += `
                 <div class="section-title">📋 Movimentações</div>
                 <table>
-                    <thead>
-                        <tr>
-                            <th>Data</th>
-                            <th>Bobina</th>
-                            <th>Metros</th>
-                            <th>Empresa</th>
-                            <th>Técnico</th>
-                            <th>OS</th>
-                        </tr>
-                    </thead>
+                    <thead><tr><th>Data</th><th>Bobina</th><th>Metros</th><th>Empresa</th><th>Técnico</th><th>OS</th></tr></thead>
                     <tbody>
             `;
 
             movimentacoes.slice().reverse().forEach(m => {
-                const bobina = bobinas.find(b => b.id === m.bobinaId);
-                const nomeBobina = bobina ? `${bobina.fabricante} - ${bobina.lote} - ${bobina.tipo}` : '#' + m.bobinaId;
+                const bobina = bobinas.find(b => b.id === m.bobina_id);
+                const nomeBobina = bobina ? `${bobina.fabricante} - ${bobina.lote} - ${bobina.tipo}` : '#' + m.bobina_id;
                 html += `
                     <tr>
                         <td>${m.data}</td>
                         <td>${nomeBobina}</td>
-                        <td><strong>${m.metrosUtilizados}m</strong></td>
+                        <td><strong>${m.metros_utilizados}m</strong></td>
                         <td>${m.equipe}</td>
                         <td>${m.funcionario}</td>
-                        <td>${m.ordemServico || '-'}</td>
+                        <td>${m.ordem_servico || '-'}</td>
                     </tr>
                 `;
             });
@@ -647,12 +1087,8 @@
                     <p>Este relatório foi gerado automaticamente pelo sistema FiberManager.</p>
                 </div>
                 <div style="text-align: center; margin-top: 20px;">
-                    <button onclick="window.print()" style="padding: 10px 30px; background: #4F46E5; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer;">
-                        🖨️ Imprimir / Salvar como PDF
-                    </button>
-                    <button onclick="window.close()" style="padding: 10px 30px; background: #6b7280; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; margin-left: 10px;">
-                        ✕ Fechar
-                    </button>
+                    <button onclick="window.print()" style="padding: 10px 30px; background: #4F46E5; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer;">🖨️ Imprimir / Salvar como PDF</button>
+                    <button onclick="window.close()" style="padding: 10px 30px; background: #6b7280; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; margin-left: 10px;">✕ Fechar</button>
                 </div>
             </body>
             </html>
@@ -666,417 +1102,6 @@
             setTimeout(() => {
                 alert('✅ Relatório PDF aberto!\n\n📌 Clique em "Imprimir" para salvar como PDF.');
             }, 500);
-        }
-
-        // ============================================
-        // TELA DE BOBINAS
-        // ============================================
-        function showBobinas() {
-            let lista = bobinas;
-            if (filtroBusca.trim()) {
-                const termo = filtroBusca.toLowerCase();
-                lista = bobinas.filter(b => 
-                    b.id.toString().includes(termo) ||
-                    b.localizacao.toLowerCase().includes(termo) ||
-                    b.fabricante.toLowerCase().includes(termo) ||
-                    b.lote.toLowerCase().includes(termo) ||
-                    b.tipo.toLowerCase().includes(termo) ||
-                    b.status.toLowerCase().includes(termo)
-                );
-            }
-
-            document.getElementById('root').innerHTML = `
-                <div class="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 md:p-6">
-                    <div class="flex flex-wrap justify-between items-center mb-6">
-                        <div>
-                            <h1 class="text-2xl font-bold text-gray-800 dark:text-white">📦 Bobinas</h1>
-                            <p class="text-gray-500 dark:text-gray-400">${lista.length} bobina(s) encontrada(s)</p>
-                        </div>
-                        <div class="flex flex-wrap gap-2 mt-3 md:mt-0">
-                            <button onclick="showFormBobina()" class="px-4 py-2 bg-blue-500 text-white rounded-lg text-sm hover:bg-blue-600">➕ Nova</button>
-                            <button onclick="showDashboard()" class="px-4 py-2 bg-gray-500 text-white rounded-lg text-sm hover:bg-gray-600">← Voltar</button>
-                            <button onclick="toggleDarkMode()" class="px-4 py-2 bg-gray-300 dark:bg-gray-700 rounded-lg text-sm">🌙</button>
-                        </div>
-                    </div>
-
-                    <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow mb-6">
-                        <div class="flex gap-3">
-                            <div class="flex-1 relative">
-                                <span class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">🔍</span>
-                                <input type="text" id="buscaInput" value="${filtroBusca}" oninput="filtrarBobinas(this.value)" placeholder="Buscar..." class="w-full pl-10 pr-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white">
-                            </div>
-                            <button onclick="limparBusca()" class="px-4 py-2 bg-gray-300 dark:bg-gray-600 rounded-lg">Limpar</button>
-                        </div>
-                    </div>
-
-                    <div class="bg-white dark:bg-gray-800 rounded-xl shadow overflow-x-auto">
-                        <table class="w-full text-sm">
-                            <thead class="bg-gray-50 dark:bg-gray-700">
-                                <tr>
-                                    <th class="px-4 py-2 text-left">ID</th>
-                                    <th class="px-4 py-2 text-left">Localização</th>
-                                    <th class="px-4 py-2 text-left">Fabricante</th>
-                                    <th class="px-4 py-2 text-left">Lote</th>
-                                    <th class="px-4 py-2 text-left">Tipo</th>
-                                    <th class="px-4 py-2 text-left">Capacidade</th>
-                                    <th class="px-4 py-2 text-left">Inicial</th>
-                                    <th class="px-4 py-2 text-left">Usados</th>
-                                    <th class="px-4 py-2 text-left">Restante</th>
-                                    <th class="px-4 py-2 text-left">Status</th>
-                                    <th class="px-4 py-2 text-left">Ações</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${lista.length === 0 ? `
-                                    <tr><td colspan="11" class="text-center py-8 text-gray-500">Nenhuma bobina encontrada</td></tr>
-                                ` : lista.map(b => `
-                                    <tr class="border-b dark:border-gray-700">
-                                        <td class="px-4 py-2 font-medium">#${b.id}</td>
-                                        <td class="px-4 py-2">${b.localizacao}</td>
-                                        <td class="px-4 py-2">${b.fabricante}</td>
-                                        <td class="px-4 py-2">${b.lote}</td>
-                                        <td class="px-4 py-2">${b.tipo}</td>
-                                        <td class="px-4 py-2">${b.capacidade} FO</td>
-                                        <td class="px-4 py-2">${b.metragemInicial}m</td>
-                                        <td class="px-4 py-2">${b.metrosUsados}m</td>
-                                        <td class="px-4 py-2">${b.metragemInicial - b.metrosUsados}m</td>
-                                        <td class="px-4 py-2">
-                                            <span class="px-2 py-1 rounded-full text-xs ${b.status === 'Nova' ? 'bg-green-100 text-green-700' : b.status === 'Em uso' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700'}">${b.status}</span>
-                                        </td>
-                                        <td class="px-4 py-2">
-                                            <button onclick="editarBobina(${b.id})" class="text-blue-600 mr-2">✏️</button>
-                                            <button onclick="excluirBobina(${b.id})" class="text-red-600">🗑️</button>
-                                        </td>
-                                    </tr>
-                                `).join('')}
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <div class="mt-4 grid grid-cols-5 gap-2 text-center">
-                        <div class="bg-white dark:bg-gray-800 rounded-lg p-2"><p class="text-xs text-gray-500">Total</p><p class="font-bold">${bobinas.length}</p></div>
-                        <div class="bg-white dark:bg-gray-800 rounded-lg p-2"><p class="text-xs text-gray-500">Novas</p><p class="font-bold text-green-600">${bobinas.filter(b => b.status === 'Nova').length}</p></div>
-                        <div class="bg-white dark:bg-gray-800 rounded-lg p-2"><p class="text-xs text-gray-500">Em Uso</p><p class="font-bold text-blue-600">${bobinas.filter(b => b.status === 'Em uso').length}</p></div>
-                        <div class="bg-white dark:bg-gray-800 rounded-lg p-2"><p class="text-xs text-gray-500">Finalizadas</p><p class="font-bold text-gray-600">${bobinas.filter(b => b.status === 'Finalizada').length}</p></div>
-                        <div class="bg-white dark:bg-gray-800 rounded-lg p-2"><p class="text-xs text-gray-500">Filtradas</p><p class="font-bold text-orange-600">${lista.length}</p></div>
-                    </div>
-                </div>
-            `;
-        }
-
-        // ============================================
-        // FORMULÁRIO DE BOBINA
-        // ============================================
-        function showFormBobina(id = null) {
-            const editando = id !== null;
-            const b = editando ? bobinas.find(x => x.id === id) : null;
-            if (editando && !b) { alert('Bobina não encontrada!'); showBobinas(); return; }
-
-            const titulo = editando ? '✏️ Editar' : '➕ Nova Bobina';
-            const botao = editando ? 'Atualizar' : 'Cadastrar';
-
-            document.getElementById('root').innerHTML = `
-                <div class="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 md:p-6 flex items-center justify-center">
-                    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-2xl p-8">
-                        <div class="flex justify-between items-center mb-6">
-                            <h2 class="text-2xl font-bold text-gray-800 dark:text-white">${titulo}</h2>
-                            <button onclick="showBobinas()" class="text-2xl text-gray-500">✕</button>
-                        </div>
-                        <form onsubmit="salvarBobina(event)">
-                            <input type="hidden" id="editId" value="${editando ? id : ''}">
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div class="md:col-span-2">
-                                    <label class="block text-sm font-medium mb-1">📍 Localização</label>
-                                    <input type="text" id="fLocalizacao" value="${editando ? b.localizacao : ''}" class="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white" required>
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium mb-1">🏭 Fabricante</label>
-                                    <input type="text" id="fFabricante" value="${editando ? b.fabricante : ''}" class="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white" required>
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium mb-1">📦 Lote</label>
-                                    <input type="text" id="fLote" value="${editando ? b.lote : ''}" class="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white" required>
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium mb-1">🔷 Tipo</label>
-                                    <input type="text" id="fTipo" value="${editando ? b.tipo : ''}" class="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white" required>
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium mb-1">📊 Capacidade (FO)</label>
-                                    <input type="number" id="fCapacidade" value="${editando ? b.capacidade : ''}" class="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white" required>
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium mb-1">📏 Metragem Inicial (m)</label>
-                                    <input type="number" id="fMetragemInicial" value="${editando ? b.metragemInicial : ''}" class="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white" required>
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium mb-1">📉 Metros Usados (m)</label>
-                                    <input type="number" id="fMetrosUsados" value="${editando ? b.metrosUsados : ''}" class="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white" required>
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium mb-1">📌 Status</label>
-                                    <select id="fStatus" class="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white">
-                                        <option value="Nova" ${editando && b.status === 'Nova' ? 'selected' : ''}>Nova</option>
-                                        <option value="Em uso" ${editando && b.status === 'Em uso' ? 'selected' : ''}>Em uso</option>
-                                        <option value="Finalizada" ${editando && b.status === 'Finalizada' ? 'selected' : ''}>Finalizada</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="mt-4 p-3 bg-gray-100 dark:bg-gray-700 rounded-lg">
-                                <p class="text-sm">📊 <strong>Metragem Restante:</strong> <span class="text-blue-600 font-bold">${editando ? b.metragemInicial - b.metrosUsados : 0}m</span></p>
-                            </div>
-                            <div class="flex gap-3 mt-6">
-                                <button type="submit" class="flex-1 bg-blue-500 text-white font-bold py-3 rounded-lg hover:bg-blue-600">${botao}</button>
-                                <button type="button" onclick="showBobinas()" class="flex-1 bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-white font-bold py-3 rounded-lg">Cancelar</button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            `;
-        }
-
-        // ============================================
-        // FUNÇÕES CRUD
-        // ============================================
-        function salvarBobina(event) {
-            event.preventDefault();
-            const id = document.getElementById('editId').value;
-            const localizacao = document.getElementById('fLocalizacao').value;
-            const fabricante = document.getElementById('fFabricante').value;
-            const lote = document.getElementById('fLote').value;
-            const tipo = document.getElementById('fTipo').value;
-            const capacidade = parseFloat(document.getElementById('fCapacidade').value);
-            const metragemInicial = parseFloat(document.getElementById('fMetragemInicial').value);
-            const metrosUsados = parseFloat(document.getElementById('fMetrosUsados').value);
-            const status = document.getElementById('fStatus').value;
-
-            if (metrosUsados > metragemInicial) {
-                alert('❌ Metros usados não podem ser maiores que a metragem inicial!');
-                return;
-            }
-
-            if (id) {
-                const index = bobinas.findIndex(b => b.id === parseInt(id));
-                if (index !== -1) {
-                    bobinas[index] = { ...bobinas[index], localizacao, fabricante, lote, tipo, capacidade, metragemInicial, metrosUsados, status };
-                }
-                alert('✅ Bobina atualizada!');
-            } else {
-                bobinas.push({ id: proximoId++, localizacao, fabricante, lote, tipo, capacidade, metragemInicial, metrosUsados, status });
-                alert('✅ Bobina cadastrada!');
-            }
-            showBobinas();
-        }
-
-        function editarBobina(id) { showFormBobina(id); }
-
-        function excluirBobina(id) {
-            if (confirm('⚠️ Tem certeza?')) {
-                bobinas = bobinas.filter(b => b.id !== id);
-                alert('🗑️ Bobina excluída!');
-                showBobinas();
-            }
-        }
-
-        function filtrarBobinas(termo) {
-            filtroBusca = termo;
-            showBobinas();
-        }
-
-        function limparBusca() {
-            filtroBusca = '';
-            document.getElementById('buscaInput').value = '';
-            showBobinas();
-        }
-
-        // ============================================
-        // TELA DE SAÍDA
-        // ============================================
-        function showSaida() {
-            const disponiveis = bobinas.filter(b => (b.metragemInicial - b.metrosUsados) > 0);
-
-            document.getElementById('root').innerHTML = `
-                <div class="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 md:p-6">
-                    <div class="flex flex-wrap justify-between items-center mb-6">
-                        <div>
-                            <h1 class="text-2xl font-bold text-gray-800 dark:text-white">📤 Registrar Saída</h1>
-                            <p class="text-gray-500 dark:text-gray-400">Registre o consumo de metros das bobinas</p>
-                        </div>
-                        <div class="flex gap-2 mt-3 md:mt-0">
-                            <button onclick="showDashboard()" class="px-4 py-2 bg-gray-500 text-white rounded-lg text-sm hover:bg-gray-600">← Voltar</button>
-                            <button onclick="toggleDarkMode()" class="px-4 py-2 bg-gray-300 dark:bg-gray-700 rounded-lg text-sm">🌙</button>
-                        </div>
-                    </div>
-
-                    <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow mb-6">
-                        <h2 class="text-lg font-semibold mb-4">📝 Nova Saída</h2>
-                        <form onsubmit="registrarSaida(event)" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div class="md:col-span-2">
-                                <label class="block text-sm font-medium mb-1">Selecione a Bobina *</label>
-                                <select id="sBobinaId" class="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white" required>
-                                    <option value="">Selecione uma bobina...</option>
-                                    ${disponiveis.map(b => `
-                                        <option value="${b.id}">${b.fabricante} - ${b.lote} - ${b.tipo} (${b.metragemInicial - b.metrosUsados}m disponíveis)</option>
-                                    `).join('')}
-                                </select>
-                                ${disponiveis.length === 0 ? '<p class="text-red-500 text-sm mt-1">⚠️ Nenhuma bobina disponível!</p>' : ''}
-                            </div>
-
-                            <div>
-                                <label class="block text-sm font-medium mb-1">🏢 Empresa *</label>
-                                <input type="text" id="sEquipe" placeholder="Digite o nome da empresa" class="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white" required>
-                            </div>
-
-                            <div>
-                                <label class="block text-sm font-medium mb-1">👤 Técnico *</label>
-                                <input type="text" id="sFuncionario" placeholder="Nome do técnico" class="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white" required>
-                            </div>
-
-                            <div>
-                                <label class="block text-sm font-medium mb-1">📋 Ordem de Serviço (opcional)</label>
-                                <input type="text" id="sOrdem" placeholder="OS-001 (opcional)" class="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white">
-                            </div>
-
-                            <div>
-                                <label class="block text-sm font-medium mb-1">📏 Metros Utilizados (m) (opcional)</label>
-                                <input type="number" id="sMetros" placeholder="0 (opcional)" min="0" class="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white">
-                            </div>
-
-                            <div class="md:col-span-2">
-                                <label class="block text-sm font-medium mb-1">📝 Observação</label>
-                                <textarea id="sObservacao" rows="2" placeholder="Informações adicionais..." class="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white"></textarea>
-                            </div>
-
-                            <div class="md:col-span-2 flex gap-3">
-                                <button type="submit" class="flex-1 bg-orange-500 text-white font-bold py-3 rounded-lg hover:bg-orange-600" ${disponiveis.length === 0 ? 'disabled' : ''}>✅ Registrar Saída</button>
-                                <button type="reset" class="flex-1 bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-white font-bold py-3 rounded-lg">Limpar</button>
-                            </div>
-                        </form>
-                    </div>
-
-                    <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow">
-                        <h2 class="text-lg font-semibold mb-4">📋 Histórico de Saídas</h2>
-                        ${movimentacoes.length === 0 ? '<p class="text-center text-gray-500 py-4">Nenhuma saída registrada.</p>' : `
-                            <div class="overflow-x-auto">
-                                <table class="w-full text-sm">
-                                    <thead class="bg-gray-50 dark:bg-gray-700">
-                                        <tr>
-                                            <th class="px-4 py-2 text-left">Data</th>
-                                            <th class="px-4 py-2 text-left">Bobina</th>
-                                            <th class="px-4 py-2 text-left">Metros</th>
-                                            <th class="px-4 py-2 text-left">Empresa</th>
-                                            <th class="px-4 py-2 text-left">Técnico</th>
-                                            <th class="px-4 py-2 text-left">OS</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        ${movimentacoes.slice().reverse().map(m => {
-                                            const bobina = bobinas.find(b => b.id === m.bobinaId);
-                                            const nomeBobina = bobina ? `${bobina.fabricante} - ${bobina.lote} - ${bobina.tipo}` : '#' + m.bobinaId;
-                                            return `
-                                                <tr class="border-b dark:border-gray-700">
-                                                    <td class="px-4 py-2">${m.data}</td>
-                                                    <td class="px-4 py-2 font-medium">${nomeBobina}</td>
-                                                    <td class="px-4 py-2 font-bold text-orange-600">${m.metrosUtilizados}m</td>
-                                                    <td class="px-4 py-2">${m.equipe}</td>
-                                                    <td class="px-4 py-2">${m.funcionario}</td>
-                                                    <td class="px-4 py-2">${m.ordemServico || '-'}</td>
-                                                </tr>
-                                            `;
-                                        }).join('')}
-                                    </tbody>
-                                </table>
-                            </div>
-                        `}
-                    </div>
-                </div>
-            `;
-        }
-
-        // ============================================
-        // FUNÇÃO PARA REGISTRAR SAÍDA
-        // ============================================
-        function registrarSaida(event) {
-            event.preventDefault();
-            
-            const bobinaId = parseInt(document.getElementById('sBobinaId').value);
-            const equipe = document.getElementById('sEquipe').value;
-            const funcionario = document.getElementById('sFuncionario').value;
-            const ordem = document.getElementById('sOrdem').value;
-            const metros = parseFloat(document.getElementById('sMetros').value) || 0;
-            const obs = document.getElementById('sObservacao').value;
-
-            if (!bobinaId) { 
-                alert('❌ Selecione uma bobina!'); 
-                return; 
-            }
-            
-            if (!equipe.trim()) { 
-                alert('❌ Digite o nome da empresa!'); 
-                return; 
-            }
-            
-            if (!funcionario.trim()) { 
-                alert('❌ Digite o nome do técnico!'); 
-                return; 
-            }
-            
-            const bobina = bobinas.find(b => b.id === bobinaId);
-            if (!bobina) { 
-                alert('❌ Bobina não encontrada!'); 
-                return; 
-            }
-
-            const disponivel = bobina.metragemInicial - bobina.metrosUsados;
-            
-            if (metros === 0) {
-                if (!confirm(`⚠️ Você está registrando 0 metros para a bobina ${bobina.fabricante} - ${bobina.lote} - ${bobina.tipo}.\n\nDeseja continuar?`)) {
-                    return;
-                }
-            }
-            
-            if (metros < 0) { 
-                alert('❌ Os metros não podem ser negativos!'); 
-                return; 
-            }
-
-            if (metros > disponivel) { 
-                alert(`❌ Disponível: ${disponivel}m`); 
-                return; 
-            }
-
-            bobina.metrosUsados += metros;
-            const restante = bobina.metragemInicial - bobina.metrosUsados;
-            
-            if (restante === 0) {
-                bobina.status = 'Finalizada';
-            } else if (bobina.metrosUsados > 0) {
-                bobina.status = 'Em uso';
-            }
-
-            const now = new Date();
-            movimentacoes.push({
-                id: movimentacoes.length + 1,
-                bobinaId: bobina.id,
-                equipe: equipe,
-                funcionario: funcionario,
-                ordemServico: ordem || 'Não informado',
-                metrosUtilizados: metros,
-                observacao: obs,
-                data: now.toLocaleDateString('pt-BR'),
-                hora: now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
-            });
-
-            alert(`✅ Saída registrada!\n📏 ${metros}m utilizados\n📦 Restante: ${restante}m`);
-            
-            document.getElementById('sBobinaId').value = '';
-            document.getElementById('sEquipe').value = '';
-            document.getElementById('sFuncionario').value = '';
-            document.getElementById('sOrdem').value = '';
-            document.getElementById('sMetros').value = '';
-            document.getElementById('sObservacao').value = '';
-            
-            showSaida();
         }
 
         // ============================================
@@ -1098,9 +1123,14 @@
         }
 
         // ============================================
-        // INICIAR
+        // INICIAR (CARREGAR DADOS DO BANCO)
         // ============================================
-        showLogin();
+        async function iniciarApp() {
+            await carregarDados();
+            showLogin();
+        }
+        
+        iniciarApp();
     </script>
 </body>
 </html>
