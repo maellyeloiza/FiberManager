@@ -11,7 +11,7 @@
     
     <script>
       // ========================================
-      // DADOS GLOBAIS (simulando banco de dados)
+      // DADOS GLOBAIS
       // ========================================
       let bobinas = [
         { 
@@ -159,7 +159,7 @@
                   ${movimentacoes.slice(-5).reverse().map(m => `
                     <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
                       <div>
-                        <p class="font-medium text-gray-800 dark:text-white text-sm">Bobina ${m.bobinaId}</p>
+                        <p class="font-medium text-gray-800 dark:text-white text-sm">Bobina #${m.bobinaId}</p>
                         <p class="text-xs text-gray-500 dark:text-gray-400">${m.cliente} • ${m.data} ${m.hora}</p>
                       </div>
                       <div class="text-right">
@@ -182,10 +182,9 @@
       }
 
       // ========================================
-      // TELA DE CADASTRO DE BOBINAS COM BUSCA
+      // TELA DE CADASTRO DE BOBINAS
       // ========================================
       function showBobinas() {
-        // Aplicar filtro de busca
         let bobinasFiltradas = bobinas
         if (filtroBusca.trim() !== '') {
           const termo = filtroBusca.toLowerCase().trim()
@@ -234,7 +233,6 @@
 
         document.getElementById('root').innerHTML = `
           <div class="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 md:p-6">
-            <!-- Cabeçalho -->
             <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
               <div>
                 <h1 class="text-2xl md:text-3xl font-bold text-gray-800 dark:text-white">📦 Cadastro de Bobinas</h1>
@@ -253,7 +251,6 @@
               </div>
             </div>
 
-            <!-- Busca -->
             <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 mb-6">
               <div class="flex flex-col sm:flex-row gap-3">
                 <div class="flex-1">
@@ -273,12 +270,11 @@
                   Limpar
                 </button>
                 <span class="text-sm text-gray-500 dark:text-gray-400 flex items-center">
-                  ${bobinasFiltradas.length} bobina(s) encontrada(s)
+                  ${bobinasFiltradas.length} bobina(s)
                 </span>
               </div>
             </div>
 
-            <!-- Tabela -->
             <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden">
               <div class="overflow-x-auto">
                 <table class="w-full">
@@ -290,18 +286,18 @@
                       <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Lote</th>
                       <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Tipo</th>
                       <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Capacidade</th>
-                      <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Metragem Inicial</th>
-                      <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Metros Usados</th>
+                      <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Inicial</th>
+                      <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Usados</th>
                       <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Restante</th>
                       <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Status</th>
                       <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Ações</th>
                     </tr>
                   </thead>
-                  <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+                  <tbody>
                     ${bobinasFiltradas.length > 0 ? listaBobinas : `
                       <tr>
                         <td colspan="11" class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
-                          ${filtroBusca ? 'Nenhuma bobina encontrada para esta busca.' : 'Nenhuma bobina cadastrada. Clique em "Nova Bobina" para começar!'}
+                          ${filtroBusca ? 'Nenhuma bobina encontrada.' : 'Nenhuma bobina cadastrada.'}
                         </td>
                       </tr>
                     `}
@@ -310,7 +306,6 @@
               </div>
             </div>
 
-            <!-- Resumo -->
             <div class="mt-4 grid grid-cols-2 sm:grid-cols-5 gap-3">
               <div class="bg-white dark:bg-gray-800 rounded-lg p-3 text-center">
                 <p class="text-xs text-gray-500 dark:text-gray-400">Total</p>
@@ -341,9 +336,6 @@
         `
       }
 
-      // ========================================
-      // FUNÇÕES DE BUSCA
-      // ========================================
       function filtrarBobinas(termo) {
         filtroBusca = termo
         showBobinas()
@@ -356,7 +348,7 @@
       }
 
       // ========================================
-      // FORMULÁRIO DE BOBINA (ATUALIZADO)
+      // FORMULÁRIO DE BOBINA
       // ========================================
       function showFormBobina(id = null) {
         const editando = id !== null
@@ -371,7 +363,6 @@
         const titulo = editando ? '✏️ Editar Bobina' : '➕ Nova Bobina'
         const botao = editando ? 'Atualizar' : 'Cadastrar'
         
-        // Valores para edição
         const localizacao = editando ? bobina.localizacao : ''
         const fabricante = editando ? bobina.fabricante : ''
         const lote = editando ? bobina.lote : ''
@@ -393,49 +384,34 @@
                 <input type="hidden" id="editId" value="${editando ? id : ''}" />
                 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <!-- Localização -->
                   <div class="md:col-span-2">
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">📍 Localização da Bobina *</label>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">📍 Localização *</label>
                     <input type="text" id="localizacao" value="${localizacao}" placeholder="Ex: Depósito A - Prateleira 1" class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white" required />
                   </div>
-
-                  <!-- Fabricante -->
                   <div>
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">🏭 Fabricante *</label>
-                    <input type="text" id="fabricante" value="${fabricante}" placeholder="Ex: Corning, Prysmian" class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white" required />
+                    <input type="text" id="fabricante" value="${fabricante}" placeholder="Ex: Corning" class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white" required />
                   </div>
-
-                  <!-- Lote -->
                   <div>
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">📦 Lote *</label>
                     <input type="text" id="lote" value="${lote}" placeholder="Ex: LOT-2026-001" class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white" required />
                   </div>
-
-                  <!-- Tipo -->
                   <div>
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">🔷 Tipo *</label>
-                    <input type="text" id="tipo" value="${tipo}" placeholder="Ex: SMF-28, G.652.D" class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white" required />
+                    <input type="text" id="tipo" value="${tipo}" placeholder="Ex: SMF-28" class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white" required />
                   </div>
-
-                  <!-- Capacidade -->
                   <div>
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">📊 Capacidade (FO) *</label>
-                    <input type="number" id="capacidade" value="${capacidade}" placeholder="Ex: 24, 48, 96" class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white" required />
+                    <input type="number" id="capacidade" value="${capacidade}" placeholder="Ex: 24" class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white" required />
                   </div>
-
-                  <!-- Metragem Inicial -->
                   <div>
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">📏 Metragem Inicial (m) *</label>
                     <input type="number" id="metragemInicial" value="${metragemInicial}" placeholder="0" class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white" required />
                   </div>
-
-                  <!-- Metros Usados -->
                   <div>
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">📉 Metros Usados (m) *</label>
                     <input type="number" id="metrosUsados" value="${metrosUsados}" placeholder="0" class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white" required />
                   </div>
-
-                  <!-- Status -->
                   <div>
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">📌 Status *</label>
                     <select id="status" class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
@@ -446,16 +422,12 @@
                   </div>
                 </div>
 
-                <!-- Informação de Metragem Restante -->
                 <div class="mt-4 p-3 bg-gray-100 dark:bg-gray-700 rounded-lg">
                   <p class="text-sm text-gray-600 dark:text-gray-300">
                     📊 <strong>Metragem Restante:</strong> 
                     <span id="previewRestante" class="font-bold text-blue-600 dark:text-blue-400">
                       ${editando ? (bobina.metragemInicial - bobina.metrosUsados) : 0}m
                     </span>
-                  </p>
-                  <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                    ⚠️ A metragem restante é calculada automaticamente: Inicial - Usados
                   </p>
                 </div>
 
@@ -473,9 +445,6 @@
         `
       }
 
-      // ========================================
-      // FUNÇÕES CRUD BOBINAS (ATUALIZADAS)
-      // ========================================
       function salvarBobina(event) {
         event.preventDefault()
         
@@ -489,88 +458,101 @@
         const metrosUsados = parseFloat(document.getElementById('metrosUsados').value)
         const status = document.getElementById('status').value
 
-        // Validar
         if (metrosUsados > metragemInicial) {
           alert('❌ Os metros usados não podem ser maiores que a metragem inicial!')
           return
         }
 
-        if (metrosUsados < 0 || metragemInicial < 0) {
-          alert('❌ Os valores não podem ser negativos!')
-          return
-        }
-
         if (id) {
-          // EDITAR
           const index = bobinas.findIndex(b => b.id === parseInt(id))
           if (index !== -1) {
-            bobinas[index] = {
-              ...bobinas[index],
-              localizacao,
-              fabricante,
-              lote,
-              tipo,
-              capacidade,
-              metragemInicial,
-              metrosUsados,
-              status
-            }
+            bobinas[index] = { ...bobinas[index], localizacao, fabricante, lote, tipo, capacidade, metragemInicial, metrosUsados, status }
           }
-          alert('✅ Bobina atualizada com sucesso!')
+          alert('✅ Bobina atualizada!')
         } else {
-          // CRIAR
-          bobinas.push({
-            id: proximoId++,
-            localizacao,
-            fabricante,
-            lote,
-            tipo,
-            capacidade,
-            metragemInicial,
-            metrosUsados,
-            status
-          })
-          alert('✅ Bobina cadastrada com sucesso!')
+          bobinas.push({ id: proximoId++, localizacao, fabricante, lote, tipo, capacidade, metragemInicial, metrosUsados, status })
+          alert('✅ Bobina cadastrada!')
         }
-
         showBobinas()
       }
 
-      function editarBobina(id) { 
-        showFormBobina(id) 
-      }
+      function editarBobina(id) { showFormBobina(id) }
       
       function excluirBobina(id) {
-        if (confirm('⚠️ Tem certeza que deseja excluir esta bobina?')) {
+        if (confirm('⚠️ Tem certeza?')) {
           bobinas = bobinas.filter(b => b.id !== id)
-          alert('🗑️ Bobina excluída com sucesso!')
+          alert('🗑️ Bobina excluída!')
           showBobinas()
         }
       }
 
       // ========================================
-      // FUNÇÕES GLOBAIS
+      // TELA DE REGISTRAR SAÍDA
       // ========================================
-      
-      function toggleDarkMode() {
-        document.documentElement.classList.toggle('dark')
-      }
+      function showSaida() {
+        const bobinasDisponiveis = bobinas.filter(b => (b.metragemInicial - b.metrosUsados) > 0)
+        
+        document.getElementById('root').innerHTML = `
+          <div class="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 md:p-6">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
+              <div>
+                <h1 class="text-2xl md:text-3xl font-bold text-gray-800 dark:text-white">📤 Registrar Saída</h1>
+                <p class="text-gray-500 dark:text-gray-400 text-sm">Registre o consumo de metros das bobinas</p>
+              </div>
+              <div class="flex flex-wrap items-center gap-2 mt-3 md:mt-0">
+                <button onclick="showDashboard()" class="px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg text-sm transition">
+                  ← Voltar
+                </button>
+                <button onclick="toggleDarkMode()" class="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700">
+                  <span class="text-xl">🌙</span>
+                </button>
+              </div>
+            </div>
 
-      function handleLogin(event) {
-        event.preventDefault()
-        const email = document.getElementById('email').value
-        const senha = document.getElementById('senha').value
-        if (email && senha) {
-          showDashboard()
-        } else {
-          alert('Por favor, preencha todos os campos!')
-        }
-      }
+            <!-- Formulário -->
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 mb-6">
+              <h2 class="text-lg font-semibold text-gray-800 dark:text-white mb-4">📝 Nova Saída</h2>
+              
+              <form onsubmit="registrarSaida(event)" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="md:col-span-2">
+                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Selecione a Bobina *</label>
+                  <select id="bobinaId" class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white" required>
+                    <option value="">Selecione uma bobina...</option>
+                    ${bobinasDisponiveis.map(b => `
+                      <option value="${b.id}">#${b.id} - ${b.fabricante} - ${b.tipo} (${b.metragemInicial - b.metrosUsados}m disponíveis)</option>
+                    `).join('')}
+                  </select>
+                  ${bobinasDisponiveis.length === 0 ? `
+                    <p class="text-sm text-red-500 mt-1">⚠️ Nenhuma bobina com estoque disponível!</p>
+                  ` : ''}
+                </div>
 
-      // ========================================
-      // INICIAR O APP
-      // ========================================
-      showLogin()
-    </script>
-  </body>
-</html>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">👥 Equipe *</label>
+                  <select id="equipe" class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white" required>
+                    <option value="">Selecione...</option>
+                    <option value="Equipe Alpha">Equipe Alpha</option>
+                    <option value="Equipe Beta">Equipe Beta</option>
+                    <option value="Equipe Gama">Equipe Gama</option>
+                    <option value="Equipe Delta">Equipe Delta</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">👤 Funcionário *</label>
+                  <input type="text" id="funcionario" placeholder="Nome do funcionário" class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white" required />
+                </div>
+
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">🏢 Cliente *</label>
+                  <input type="text" id="cliente" placeholder="Nome do cliente" class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white" required />
+                </div>
+
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">📋 Ordem de Serviço *</label>
+                  <input type="text" id="ordemServico" placeholder="OS-001" class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white" required />
+                </div>
+
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">📏 Metros Utilizados (m) *</label>
+                  <input type
