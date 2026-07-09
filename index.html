@@ -9,22 +9,64 @@
   <body>
     <div id="root"></div>
     
-    <!-- Tudo em um único arquivo para evitar erros -->
     <script>
       // ========================================
-      // TELA DE LOGIN
+      // DADOS GLOBAIS (simulando banco de dados)
+      // ========================================
+      let bobinas = [
+        { 
+          id: 1, 
+          codigo: 'FIB-001', 
+          fabricante: 'Corning', 
+          tipo: 'SMF-28', 
+          metragemInicial: 2000, 
+          metragemRestante: 1850,
+          dataEntrada: '01/07/2026',
+          fornecedor: 'FiberTech',
+          local: 'Depósito A - Prateleira 1',
+          status: 'Em uso'
+        },
+        { 
+          id: 2, 
+          codigo: 'FIB-002', 
+          fabricante: 'Prysmian', 
+          tipo: 'G.652.D', 
+          metragemInicial: 3000, 
+          metragemRestante: 3000,
+          dataEntrada: '05/07/2026',
+          fornecedor: 'Optical Solutions',
+          local: 'Depósito B - Prateleira 3',
+          status: 'Nova'
+        },
+        { 
+          id: 3, 
+          codigo: 'FIB-003', 
+          fabricante: 'Furukawa', 
+          tipo: 'G.655', 
+          metragemInicial: 1500, 
+          metragemRestante: 0,
+          dataEntrada: '15/06/2026',
+          fornecedor: 'FiberTech',
+          local: 'Depósito A - Prateleira 2',
+          status: 'Finalizada'
+        }
+      ]
+
+      let proximoId = 4
+      let bobinaEditando = null
+
+      // ========================================
+      // FUNÇÕES DE NAVEGAÇÃO
       // ========================================
       function showLogin() {
         document.getElementById('root').innerHTML = `
           <div class="min-h-screen bg-gradient-to-br from-indigo-50 via-blue-50 to-cyan-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center p-4">
             <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md p-8">
-              
               <div class="flex justify-end mb-4">
                 <button onclick="toggleDarkMode()" class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
                   <span class="text-xl">🌙</span>
                 </button>
               </div>
-
               <div class="text-center mb-8">
                 <div class="text-6xl mb-3">🔷</div>
                 <h1 class="text-4xl font-bold bg-gradient-to-r from-indigo-600 to-blue-600 bg-clip-text text-transparent">
@@ -34,80 +76,46 @@
                   Gerenciamento de Bobinas de Fibra Óptica
                 </p>
               </div>
-
               <form onsubmit="handleLogin(event)" class="space-y-6">
                 <div>
-                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    📧 E-mail
-                  </label>
-                  <input
-                    type="email"
-                    id="email"
-                    class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
-                    placeholder="seu@email.com"
-                    required
-                  />
+                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">📧 E-mail</label>
+                  <input type="email" id="email" class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white" placeholder="seu@email.com" required />
                 </div>
-
                 <div>
-                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    🔒 Senha
-                  </label>
-                  <input
-                    type="password"
-                    id="senha"
-                    class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
-                    placeholder="••••••••"
-                    required
-                  />
+                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">🔒 Senha</label>
+                  <input type="password" id="senha" class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white" placeholder="••••••••" required />
                 </div>
-
                 <div class="flex items-center justify-between">
                   <label class="flex items-center text-sm text-gray-600 dark:text-gray-400">
-                    <input type="checkbox" class="mr-2" />
-                    Lembrar-me
+                    <input type="checkbox" class="mr-2" /> Lembrar-me
                   </label>
-                  <a href="#" class="text-sm text-indigo-600 dark:text-indigo-400 hover:underline">
-                    Esqueci a senha?
-                  </a>
+                  <a href="#" class="text-sm text-indigo-600 dark:text-indigo-400 hover:underline">Esqueci a senha?</a>
                 </div>
-
-                <button
-                  type="submit"
-                  class="w-full bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white font-semibold py-3 px-4 rounded-lg transition duration-200 shadow-lg"
-                >
+                <button type="submit" class="w-full bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white font-semibold py-3 px-4 rounded-lg transition duration-200 shadow-lg">
                   Entrar no Sistema
                 </button>
               </form>
-
               <div class="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700 text-center">
-                <p class="text-xs text-gray-500 dark:text-gray-400">
-                  © 2026 FiberManager - Versão 1.0.0
-                </p>
+                <p class="text-xs text-gray-500 dark:text-gray-400">© 2026 FiberManager - Versão 1.0.0</p>
               </div>
             </div>
           </div>
         `
       }
 
-      // ========================================
-      // TELA DE DASHBOARD
-      // ========================================
       function showDashboard() {
         document.getElementById('root').innerHTML = `
           <div class="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 md:p-6">
-            
             <!-- Cabeçalho -->
             <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
               <div>
-                <h1 class="text-2xl md:text-3xl font-bold text-gray-800 dark:text-white">
-                  📊 Dashboard
-                </h1>
-                <p class="text-gray-500 dark:text-gray-400 text-sm">
-                  Bem-vindo(a) ao FiberManager!
-                </p>
+                <h1 class="text-2xl md:text-3xl font-bold text-gray-800 dark:text-white">📊 Dashboard</h1>
+                <p class="text-gray-500 dark:text-gray-400 text-sm">Bem-vindo(a) ao FiberManager!</p>
               </div>
-              <div class="flex items-center gap-3 mt-3 md:mt-0">
+              <div class="flex flex-wrap items-center gap-2 mt-3 md:mt-0">
+                <button onclick="showBobinas()" class="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg text-sm transition">
+                  📦 Bobinas
+                </button>
                 <button onclick="toggleDarkMode()" class="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700">
                   <span class="text-xl">🌙</span>
                 </button>
@@ -121,11 +129,11 @@
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
               <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
                 <p class="text-sm text-gray-500 dark:text-gray-400">📦 Bobinas em Estoque</p>
-                <p class="text-3xl font-bold text-gray-800 dark:text-white">156</p>
+                <p class="text-3xl font-bold text-gray-800 dark:text-white">${bobinas.length}</p>
               </div>
               <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
                 <p class="text-sm text-gray-500 dark:text-gray-400">📏 Metros Disponíveis</p>
-                <p class="text-3xl font-bold text-gray-800 dark:text-white">12.450m</p>
+                <p class="text-3xl font-bold text-gray-800 dark:text-white">${bobinas.reduce((total, b) => total + b.metragemRestante, 0)}m</p>
               </div>
               <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
                 <p class="text-sm text-gray-500 dark:text-gray-400">📉 Consumo do Dia</p>
@@ -133,16 +141,14 @@
               </div>
               <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
                 <p class="text-sm text-gray-500 dark:text-gray-400">⚠️ Estoque Baixo</p>
-                <p class="text-3xl font-bold text-red-500">8</p>
+                <p class="text-3xl font-bold text-red-500">${bobinas.filter(b => b.metragemRestante < 500).length}</p>
               </div>
             </div>
 
             <!-- Gráfico e Lista -->
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
-                <h2 class="text-lg font-semibold text-gray-800 dark:text-white mb-4">
-                  📊 Consumo Mensal
-                </h2>
+                <h2 class="text-lg font-semibold text-gray-800 dark:text-white mb-4">📊 Consumo Mensal</h2>
                 <div class="h-48 flex items-end gap-2">
                   <div class="flex-1 flex flex-col items-center">
                     <div class="w-full bg-blue-500 rounded-t" style="height: 60%"></div>
@@ -176,9 +182,7 @@
               </div>
 
               <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
-                <h2 class="text-lg font-semibold text-gray-800 dark:text-white mb-4">
-                  📋 Últimas Movimentações
-                </h2>
+                <h2 class="text-lg font-semibold text-gray-800 dark:text-white mb-4">📋 Últimas Movimentações</h2>
                 <div class="space-y-3">
                   <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
                     <div>
@@ -210,26 +214,6 @@
                       <span class="text-xs text-gray-500 dark:text-gray-400">utilizados</span>
                     </div>
                   </div>
-                  <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                    <div>
-                      <p class="font-medium text-gray-800 dark:text-white text-sm">FIB-008</p>
-                      <p class="text-xs text-gray-500 dark:text-gray-400">Cliente D • 08/07/2026 09:20</p>
-                    </div>
-                    <div class="text-right">
-                      <p class="font-bold text-blue-600 dark:text-blue-400 text-sm">45m</p>
-                      <span class="text-xs text-gray-500 dark:text-gray-400">utilizados</span>
-                    </div>
-                  </div>
-                  <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                    <div>
-                      <p class="font-medium text-gray-800 dark:text-white text-sm">FIB-012</p>
-                      <p class="text-xs text-gray-500 dark:text-gray-400">Cliente E • 07/07/2026 13:50</p>
-                    </div>
-                    <div class="text-right">
-                      <p class="font-bold text-blue-600 dark:text-blue-400 text-sm">120m</p>
-                      <span class="text-xs text-gray-500 dark:text-gray-400">utilizados</span>
-                    </div>
-                  </div>
                 </div>
               </div>
             </div>
@@ -242,21 +226,305 @@
       }
 
       // ========================================
+      // TELA DE CADASTRO DE BOBINAS
+      // ========================================
+      function showBobinas() {
+        const listaBobinas = bobinas.map(b => `
+          <tr class="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700">
+            <td class="px-4 py-3 text-sm font-medium text-gray-800 dark:text-white">${b.codigo}</td>
+            <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">${b.fabricante}</td>
+            <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">${b.tipo}</td>
+            <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">${b.metragemInicial}m</td>
+            <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">${b.metragemRestante}m</td>
+            <td class="px-4 py-3 text-sm">
+              <span class="px-2 py-1 rounded-full text-xs font-medium
+                ${b.status === 'Nova' ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300' : 
+                  b.status === 'Em uso' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300' : 
+                  'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'}">
+                ${b.status}
+              </span>
+            </td>
+            <td class="px-4 py-3 text-sm">
+              <button onclick="editarBobina(${b.id})" class="text-blue-600 hover:text-blue-800 dark:text-blue-400 mr-3">
+                ✏️
+              </button>
+              <button onclick="excluirBobina(${b.id})" class="text-red-600 hover:text-red-800 dark:text-red-400">
+                🗑️
+              </button>
+            </td>
+          </tr>
+        `).join('')
+
+        document.getElementById('root').innerHTML = `
+          <div class="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 md:p-6">
+            <!-- Cabeçalho -->
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
+              <div>
+                <h1 class="text-2xl md:text-3xl font-bold text-gray-800 dark:text-white">📦 Cadastro de Bobinas</h1>
+                <p class="text-gray-500 dark:text-gray-400 text-sm">Gerencie todas as bobinas do estoque</p>
+              </div>
+              <div class="flex flex-wrap items-center gap-2 mt-3 md:mt-0">
+                <button onclick="showFormBobina()" class="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm transition">
+                  ➕ Nova Bobina
+                </button>
+                <button onclick="showDashboard()" class="px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg text-sm transition">
+                  ← Voltar
+                </button>
+                <button onclick="toggleDarkMode()" class="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700">
+                  <span class="text-xl">🌙</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Tabela de Bobinas -->
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden">
+              <div class="overflow-x-auto">
+                <table class="w-full">
+                  <thead class="bg-gray-50 dark:bg-gray-700">
+                    <tr>
+                      <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Código</th>
+                      <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Fabricante</th>
+                      <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Tipo</th>
+                      <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Metragem Inicial</th>
+                      <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Metragem Restante</th>
+                      <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Status</th>
+                      <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+                    ${bobinas.length > 0 ? listaBobinas : `
+                      <tr>
+                        <td colspan="7" class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
+                          Nenhuma bobina cadastrada. Clique em "Nova Bobina" para começar!
+                        </td>
+                      </tr>
+                    `}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Resumo -->
+            <div class="mt-4 grid grid-cols-1 sm:grid-cols-4 gap-4">
+              <div class="bg-white dark:bg-gray-800 rounded-lg p-4 text-center">
+                <p class="text-sm text-gray-500 dark:text-gray-400">Total de Bobinas</p>
+                <p class="text-2xl font-bold text-gray-800 dark:text-white">${bobinas.length}</p>
+              </div>
+              <div class="bg-white dark:bg-gray-800 rounded-lg p-4 text-center">
+                <p class="text-sm text-gray-500 dark:text-gray-400">Novas</p>
+                <p class="text-2xl font-bold text-green-600">${bobinas.filter(b => b.status === 'Nova').length}</p>
+              </div>
+              <div class="bg-white dark:bg-gray-800 rounded-lg p-4 text-center">
+                <p class="text-sm text-gray-500 dark:text-gray-400">Em Uso</p>
+                <p class="text-2xl font-bold text-blue-600">${bobinas.filter(b => b.status === 'Em uso').length}</p>
+              </div>
+              <div class="bg-white dark:bg-gray-800 rounded-lg p-4 text-center">
+                <p class="text-sm text-gray-500 dark:text-gray-400">Finalizadas</p>
+                <p class="text-2xl font-bold text-gray-600">${bobinas.filter(b => b.status === 'Finalizada').length}</p>
+              </div>
+            </div>
+
+            <div class="mt-8 text-center text-xs text-gray-500 dark:text-gray-400">
+              © 2026 FiberManager - Todos os direitos reservados
+            </div>
+          </div>
+        `
+      }
+
+      // ========================================
+      // FORMULÁRIO DE BOBINA
+      // ========================================
+      function showFormBobina(id = null) {
+        const editando = id !== null
+        const bobina = editando ? bobinas.find(b => b.id === id) : null
+        
+        if (editando && !bobina) {
+          alert('Bobina não encontrada!')
+          showBobinas()
+          return
+        }
+
+        const titulo = editando ? '✏️ Editar Bobina' : '➕ Nova Bobina'
+        const botao = editando ? 'Atualizar' : 'Cadastrar'
+        const codigo = editando ? bobina.codigo : `FIB-${String(proximoId).padStart(3, '0')}`
+        const fabricante = editando ? bobina.fabricante : ''
+        const tipo = editando ? bobina.tipo : ''
+        const metragemInicial = editando ? bobina.metragemInicial : ''
+        const metragemRestante = editando ? bobina.metragemRestante : ''
+        const fornecedor = editando ? bobina.fornecedor : ''
+        const local = editando ? bobina.local : ''
+        const status = editando ? bobina.status : 'Nova'
+
+        document.getElementById('root').innerHTML = `
+          <div class="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 md:p-6 flex items-center justify-center">
+            <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-2xl p-8">
+              <!-- Cabeçalho -->
+              <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-gray-800 dark:text-white">${titulo}</h2>
+                <button onclick="showBobinas()" class="text-gray-500 hover:text-gray-700 dark:text-gray-400">
+                  ✕
+                </button>
+              </div>
+
+              <form onsubmit="salvarBobina(event)">
+                <input type="hidden" id="editId" value="${editando ? id : ''}" />
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <!-- Código -->
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Código *</label>
+                    <input type="text" id="codigo" value="${codigo}" class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white" required />
+                  </div>
+
+                  <!-- Fabricante -->
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Fabricante *</label>
+                    <input type="text" id="fabricante" value="${fabricante}" class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white" required />
+                  </div>
+
+                  <!-- Tipo -->
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tipo da Fibra *</label>
+                    <input type="text" id="tipo" value="${tipo}" placeholder="Ex: SMF-28, G.652.D" class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white" required />
+                  </div>
+
+                  <!-- Metragem Inicial -->
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Metragem Inicial (m) *</label>
+                    <input type="number" id="metragemInicial" value="${metragemInicial}" class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white" required />
+                  </div>
+
+                  <!-- Metragem Restante -->
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Metragem Restante (m) *</label>
+                    <input type="number" id="metragemRestante" value="${metragemRestante}" class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white" required />
+                  </div>
+
+                  <!-- Fornecedor -->
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Fornecedor *</label>
+                    <input type="text" id="fornecedor" value="${fornecedor}" class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white" required />
+                  </div>
+
+                  <!-- Local -->
+                  <div class="md:col-span-2">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Local de Armazenamento *</label>
+                    <input type="text" id="local" value="${local}" placeholder="Ex: Depósito A - Prateleira 1" class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white" required />
+                  </div>
+
+                  <!-- Status -->
+                  <div class="md:col-span-2">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Status *</label>
+                    <select id="status" class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+                      <option value="Nova" ${status === 'Nova' ? 'selected' : ''}>🟢 Nova</option>
+                      <option value="Em uso" ${status === 'Em uso' ? 'selected' : ''}>🔵 Em uso</option>
+                      <option value="Finalizada" ${status === 'Finalizada' ? 'selected' : ''}>⚪ Finalizada</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div class="flex gap-3 mt-6">
+                  <button type="submit" class="flex-1 bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3 rounded-lg transition">
+                    ${botao}
+                  </button>
+                  <button type="button" onclick="showBobinas()" class="flex-1 bg-gray-300 hover:bg-gray-400 dark:bg-gray-600 dark:hover:bg-gray-700 text-gray-700 dark:text-white font-semibold py-3 rounded-lg transition">
+                    Cancelar
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        `
+      }
+
+      // ========================================
+      // FUNÇÕES CRUD (Create, Read, Update, Delete)
+      // ========================================
+      
+      // Salvar (criar ou editar)
+      function salvarBobina(event) {
+        event.preventDefault()
+        
+        const id = document.getElementById('editId').value
+        const codigo = document.getElementById('codigo').value
+        const fabricante = document.getElementById('fabricante').value
+        const tipo = document.getElementById('tipo').value
+        const metragemInicial = parseFloat(document.getElementById('metragemInicial').value)
+        const metragemRestante = parseFloat(document.getElementById('metragemRestante').value)
+        const fornecedor = document.getElementById('fornecedor').value
+        const local = document.getElementById('local').value
+        const status = document.getElementById('status').value
+
+        // Validar
+        if (metragemRestante > metragemInicial) {
+          alert('A metragem restante não pode ser maior que a metragem inicial!')
+          return
+        }
+
+        if (id) {
+          // EDITAR
+          const index = bobinas.findIndex(b => b.id === parseInt(id))
+          if (index !== -1) {
+            bobinas[index] = {
+              ...bobinas[index],
+              codigo,
+              fabricante,
+              tipo,
+              metragemInicial,
+              metragemRestante,
+              fornecedor,
+              local,
+              status
+            }
+          }
+          alert('✅ Bobina atualizada com sucesso!')
+        } else {
+          // CRIAR
+          const novaBobina = {
+            id: proximoId++,
+            codigo,
+            fabricante,
+            tipo,
+            metragemInicial,
+            metragemRestante,
+            dataEntrada: new Date().toLocaleDateString('pt-BR'),
+            fornecedor,
+            local,
+            status
+          }
+          bobinas.push(novaBobina)
+          alert('✅ Bobina cadastrada com sucesso!')
+        }
+
+        showBobinas()
+      }
+
+      // Editar
+      function editarBobina(id) {
+        showFormBobina(id)
+      }
+
+      // Excluir
+      function excluirBobina(id) {
+        if (confirm('Tem certeza que deseja excluir esta bobina?')) {
+          bobinas = bobinas.filter(b => b.id !== id)
+          alert('🗑️ Bobina excluída com sucesso!')
+          showBobinas()
+        }
+      }
+
+      // ========================================
       // FUNÇÕES GLOBAIS
       // ========================================
       
-      // Alternar modo escuro
       function toggleDarkMode() {
         document.documentElement.classList.toggle('dark')
       }
 
-      // Função de login
       function handleLogin(event) {
         event.preventDefault()
-        
         const email = document.getElementById('email').value
         const senha = document.getElementById('senha').value
-        
         if (email && senha) {
           showDashboard()
         } else {
