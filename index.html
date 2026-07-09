@@ -864,6 +864,11 @@
             const novaMov = await salvarMovimentacaoBD(mov);
             if (novaMov) {
                 movimentacoes.push(novaMov);
+                console.log('✅ Movimentação salva:', novaMov);
+            } else {
+                console.error('❌ Erro ao salvar movimentação!');
+                alert('❌ Erro ao salvar movimentação!');
+                return;
             }
 
             alert(`✅ Saída registrada!\n📏 ${metros}m utilizados\n📦 Restante: ${restante}m`);
