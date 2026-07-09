@@ -17,12 +17,22 @@
         const SUPABASE_KEY = 'sb_publishable_Mm5CXywYX1pW7dbsqRyRFQ_gc-0jkcb';
 
         // ============================================
+        // USUÁRIOS LIBERADOS
+        // ============================================
+        const USUARIOS = {
+            'admin@fiber.com': { senha: 'admin123', nome: 'Administrador', tipo: 'admin' },
+            'usuario@fiber.com': { senha: 'user123', nome: 'Usuário', tipo: 'usuario' },
+            'visitante@fiber.com': { senha: 'visitante', nome: 'Visitante', tipo: 'visitante' }
+        };
+
+        // ============================================
         // DADOS GLOBAIS
         // ============================================
         let bobinas = [];
         let movimentacoes = [];
         let proximoId = 1;
         let filtroBusca = '';
+        let usuarioAtual = null;
 
         // ============================================
         // FUNÇÕES DO SUPABASE
@@ -52,7 +62,6 @@
                 console.log('✅ Dados carregados:', bobinas.length, 'bobinas,', movimentacoes.length, 'movimentações');
             } catch (error) {
                 console.error('❌ Erro ao carregar dados:', error);
-                alert('❌ Erro ao conectar com o banco de dados! Verifique sua internet.');
             }
         }
 
@@ -131,9 +140,65 @@
         }
 
         // ============================================
-        // FUNÇÕES DE TELA
+        // FUNÇÕES DE AUTENTICAÇÃO
+        // ============================================
+        function fazerLogin(email, senha) {
+            const usuario = USUARIOS[email];
+            if (usuario && usuario.senha === senha) {
+                usuarioAtual = { email, ...usuario };
+                localStorage.setItem('@FiberManager:usuario', JSON.stringify(usuarioAtual));
+                return true;
+            }
+            return false;
+        }
+
+        function getUsuarioLogado() {
+            if (usuarioAtual) return usuarioAtual;
+            const saved = localStorage.getItem('@FiberManager:usuario');
+            if (saved) {
+                usuarioAtual = JSON.parse(saved);
+                return usuarioAtual;
+            }
+            return null;
+        }
+
+        function logout() {
+            if (confirm('Deseja realmente sair?')) {
+                localStorage.removeItem('@FiberManager:usuario');
+                usuarioAtual = null;
+                showLogin();
+            }
+        }
+
+        function isAdmin() {
+            const user = getUsuarioLogado();
+            return user && user.tipo === 'admin';
+        }
+
+        function isUsuario() {
+            const user = getUsuarioLogado();
+            return user && (user.tipo === 'admin' || user.tipo === 'usuario');
+        }
+
+        function isVisitante() {
+            const user = getUsuarioLogado();
+            return user && user.tipo === 'visitante';
+        }
+
+        function podeAlterar() {
+            return isUsuario() || isAdmin();
+        }
+
+        // ============================================
+        // TELA DE LOGIN
         // ============================================
         function showLogin() {
+            const user = getUsuarioLogado();
+            if (user) {
+                showDashboard();
+                return;
+            }
+
             document.getElementById('root').innerHTML = `
                 <div class="min-h-screen bg-gradient-to-br from-indigo-50 to-blue-50 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center p-4">
                     <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md p-8">
@@ -141,62 +206,150 @@
                             <button onclick="toggleDarkMode()" class="text-2xl">🌙</button>
                         </div>
                         <div class="text-center mb-8">
-                            <h1 class="text-4xl font-bold text-indigo-600 dark:text-indigo-400">🔷 FiberManager</h1>
-                            <p class="text-gray-500 dark:text-gray-400 mt-2">Gerenciamento de Bobinas</p>
+                            <div class="text-6xl mb-3">🔷</div>
+                            <h1 class="text-4xl font-bold bg-gradient-to-r from-indigo-600 to-blue-600 bg-clip-text text-transparent">
+                                FiberManager
+                            </h1>
+                            <p class="text-gray-500 dark:text-gray-400 mt-2 text-sm">
+                                Gerenciamento de Bobinas de Fibra Óptica
+                            </p>
                         </div>
                         <form onsubmit="handleLogin(event)" class="space-y-4">
-                            <input type="email" id="email" placeholder="📧 E-mail" class="w-full px-4 py-3 border rounded-lg dark:bg-gray-700 dark:text-white" required>
-                            <input type="password" id="senha" placeholder="🔒 Senha" class="w-full px-4 py-3 border rounded-lg dark:bg-gray-700 dark:text-white" required>
-                            <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-lg transition">Entrar</button>
-                            <div class="text-center"><a href="#" class="text-sm text-indigo-600 dark:text-indigo-400">Esqueci a senha?</a></div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">📧 E-mail</label>
+                                <input type="email" id="email" placeholder="seu@email.com" class="w-full px-4 py-3 border rounded-lg dark:bg-gray-700 dark:text-white" required>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">🔒 Senha</label>
+                                <input type="password" id="senha" placeholder="••••••••" class="w-full px-4 py-3 border rounded-lg dark:bg-gray-700 dark:text-white" required>
+                            </div>
+                            <button type="submit" class="w-full bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white font-bold py-3 rounded-lg transition shadow-lg">
+                                Entrar
+                            </button>
                         </form>
+                        <div class="mt-6 text-center">
+                            <p class="text-sm text-gray-500 dark:text-gray-400">👀 <strong>Visitante:</strong> visitante@fiber.com / visitante</p>
+                            <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">👑 <strong>Admin:</strong> admin@fiber.com / admin123</p>
+                            <p class="text-xs text-gray-400 dark:text-gray-500">👤 <strong>Usuário:</strong> usuario@fiber.com / user123</p>
+                        </div>
                         <div class="mt-8 text-center text-xs text-gray-500">© 2026 FiberManager</div>
                     </div>
                 </div>
             `;
         }
 
+        // ============================================
+        // FUNÇÃO DE LOGIN
+        // ============================================
+        function handleLogin(event) {
+            event.preventDefault();
+            const email = document.getElementById('email').value;
+            const senha = document.getElementById('senha').value;
+            
+            if (fazerLogin(email, senha)) {
+                showDashboard();
+            } else {
+                alert('❌ E-mail ou senha inválidos!\n\n📌 Use:\n- visitante@fiber.com / visitante\n- admin@fiber.com / admin123\n- usuario@fiber.com / user123');
+            }
+        }
+
+        // ============================================
+        // TELA DE DASHBOARD (ATUALIZADA COM GRÁFICOS)
+        // ============================================
         function showDashboard() {
-            const total = bobinas.length;
-            const metros = bobinas.reduce((t, b) => t + (b.metragem_inicial - b.metros_usados), 0);
+            const user = getUsuarioLogado();
+            if (!user) { showLogin(); return; }
+
+            // Calcular totais
+            const totalBobinas = bobinas.length;
+            const totalMetros = bobinas.reduce((t, b) => t + (b.metragem_inicial - b.metros_usados), 0);
+            const totalConsumido = bobinas.reduce((t, b) => t + b.metros_usados, 0);
             const alerta = bobinas.filter(b => (b.metragem_inicial - b.metros_usados) < 1500 && (b.metragem_inicial - b.metros_usados) > 0).length;
             const consumoDia = movimentacoes.filter(m => m.data === new Date().toLocaleDateString('pt-BR')).reduce((t, m) => t + m.metros_utilizados, 0);
 
+            // Gráfico de cada bobina
+            const graficoBobinas = bobinas.map(b => {
+                const restante = b.metragem_inicial - b.metros_usados;
+                const percentual = b.metragem_inicial > 0 ? (restante / b.metragem_inicial * 100) : 0;
+                const cor = percentual > 50 ? 'bg-green-500' : percentual > 25 ? 'bg-yellow-500' : 'bg-red-500';
+                return `
+                    <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow hover:shadow-lg transition-shadow">
+                        <div class="flex justify-between items-start mb-2">
+                            <div>
+                                <p class="font-semibold text-gray-800 dark:text-white text-sm">${b.fabricante}</p>
+                                <p class="text-xs text-gray-500 dark:text-gray-400">${b.lote} - ${b.tipo}</p>
+                            </div>
+                            <span class="text-xs px-2 py-1 rounded-full ${b.status === 'Nova' ? 'bg-green-100 text-green-700' : b.status === 'Em uso' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700'}">${b.status}</span>
+                        </div>
+                        <div class="mt-2">
+                            <div class="flex justify-between text-xs text-gray-600 dark:text-gray-400 mb-1">
+                                <span>${restante}m disponíveis</span>
+                                <span>${b.metros_usados}m usados</span>
+                            </div>
+                            <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3 overflow-hidden">
+                                <div class="${cor} h-3 rounded-full transition-all duration-500" style="width: ${percentual}%"></div>
+                            </div>
+                            <div class="flex justify-between text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                <span>${b.metragem_inicial}m total</span>
+                                <span>${percentual.toFixed(0)}% disponível</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            const podeAlterar = !isVisitante();
+
             document.getElementById('root').innerHTML = `
                 <div class="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 md:p-6">
+                    <!-- Cabeçalho -->
                     <div class="flex flex-wrap justify-between items-center mb-6">
                         <div>
                             <h1 class="text-2xl font-bold text-gray-800 dark:text-white">📊 Dashboard</h1>
-                            <p class="text-gray-500 dark:text-gray-400">Bem-vindo ao FiberManager!</p>
+                            <p class="text-gray-500 dark:text-gray-400">Bem-vindo, <strong>${user.nome}</strong>! ${isVisitante() ? '👀 (Modo Visualização)' : ''}</p>
                         </div>
                         <div class="flex flex-wrap gap-2 mt-3 md:mt-0">
                             <button onclick="showBobinas()" class="px-4 py-2 bg-green-500 text-white rounded-lg text-sm hover:bg-green-600">📦 Bobinas</button>
-                            <button onclick="showSaida()" class="px-4 py-2 bg-orange-500 text-white rounded-lg text-sm hover:bg-orange-600">📤 Registrar Saída</button>
+                            ${podeAlterar ? `<button onclick="showSaida()" class="px-4 py-2 bg-orange-500 text-white rounded-lg text-sm hover:bg-orange-600">📤 Registrar Saída</button>` : ''}
                             <button onclick="showRelatorios()" class="px-4 py-2 bg-purple-500 text-white rounded-lg text-sm hover:bg-purple-600">📊 Relatórios</button>
                             <button onclick="toggleDarkMode()" class="px-4 py-2 bg-gray-300 dark:bg-gray-700 rounded-lg text-sm">🌙</button>
-                            <button onclick="showLogin()" class="px-4 py-2 bg-red-500 text-white rounded-lg text-sm hover:bg-red-600">Sair</button>
+                            <button onclick="logout()" class="px-4 py-2 bg-red-500 text-white rounded-lg text-sm hover:bg-red-600">Sair</button>
                         </div>
                     </div>
 
-                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                        <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow">
-                            <p class="text-sm text-gray-500 dark:text-gray-400">📦 Total</p>
-                            <p class="text-2xl font-bold text-gray-800 dark:text-white">${total}</p>
+                    <!-- Cards Resumo -->
+                    <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+                        <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow border-l-4 border-blue-500">
+                            <p class="text-sm text-gray-500 dark:text-gray-400">📦 Total Bobinas</p>
+                            <p class="text-2xl font-bold text-gray-800 dark:text-white">${totalBobinas}</p>
                         </div>
-                        <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow">
-                            <p class="text-sm text-gray-500 dark:text-gray-400">📏 Metros</p>
-                            <p class="text-2xl font-bold text-gray-800 dark:text-white">${metros}m</p>
+                        <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow border-l-4 border-green-500">
+                            <p class="text-sm text-gray-500 dark:text-gray-400">📏 Metragem Total</p>
+                            <p class="text-2xl font-bold text-gray-800 dark:text-white">${totalMetros}m</p>
                         </div>
-                        <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow">
-                            <p class="text-sm text-gray-500 dark:text-gray-400">📉 Consumo Dia</p>
-                            <p class="text-2xl font-bold text-gray-800 dark:text-white">${consumoDia}m</p>
+                        <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow border-l-4 border-orange-500">
+                            <p class="text-sm text-gray-500 dark:text-gray-400">📉 Total Consumido</p>
+                            <p class="text-2xl font-bold text-orange-600">${totalConsumido}m</p>
                         </div>
-                        <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow">
-                            <p class="text-sm text-gray-500 dark:text-gray-400">⚠️ Alerta</p>
+                        <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow border-l-4 border-purple-500">
+                            <p class="text-sm text-gray-500 dark:text-gray-400">📋 Movimentações</p>
+                            <p class="text-2xl font-bold text-gray-800 dark:text-white">${movimentacoes.length}</p>
+                        </div>
+                        <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow border-l-4 border-red-500">
+                            <p class="text-sm text-gray-500 dark:text-gray-400">⚠️ Estoque Baixo</p>
                             <p class="text-2xl font-bold text-red-500">${alerta}</p>
                         </div>
                     </div>
 
+                    <!-- Gráfico de cada bobina -->
+                    <div class="mb-6">
+                        <h2 class="text-lg font-semibold text-gray-800 dark:text-white mb-4">📊 Status de Cada Bobina</h2>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                            ${bobinas.length > 0 ? graficoBobinas : '<p class="text-center text-gray-500 dark:text-gray-400 py-8 col-span-full">Nenhuma bobina cadastrada.</p>'}
+                        </div>
+                    </div>
+
+                    <!-- Últimas Movimentações -->
                     <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow">
                         <h2 class="text-lg font-semibold text-gray-800 dark:text-white mb-4">📋 Últimas Movimentações</h2>
                         ${movimentacoes.length === 0 ? '<p class="text-center text-gray-500 dark:text-gray-400 py-4">Nenhuma movimentação registrada.</p>' : 
@@ -204,7 +357,7 @@
                                 const bobina = bobinas.find(b => b.id === m.bobina_id);
                                 const nomeBobina = bobina ? `${bobina.fabricante} - ${bobina.lote} - ${bobina.tipo}` : '#' + m.bobina_id;
                                 return `
-                                    <div class="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-700 rounded-lg mb-2">
+                                    <div class="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-700 rounded-lg mb-2 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
                                         <div>
                                             <span class="font-medium text-gray-800 dark:text-white">${nomeBobina}</span>
                                             <span class="text-sm text-gray-500 dark:text-gray-400 ml-2">${m.equipe}</span>
@@ -227,6 +380,11 @@
         // TELA DE BOBINAS
         // ============================================
         function showBobinas() {
+            const user = getUsuarioLogado();
+            if (!user) { showLogin(); return; }
+
+            const podeAlterar = !isVisitante();
+
             let lista = bobinas;
             if (filtroBusca.trim()) {
                 const termo = filtroBusca.toLowerCase();
@@ -248,7 +406,7 @@
                             <p class="text-gray-500 dark:text-gray-400">${lista.length} bobina(s) encontrada(s)</p>
                         </div>
                         <div class="flex flex-wrap gap-2 mt-3 md:mt-0">
-                            <button onclick="showFormBobina()" class="px-4 py-2 bg-blue-500 text-white rounded-lg text-sm hover:bg-blue-600">➕ Nova</button>
+                            ${podeAlterar ? `<button onclick="showFormBobina()" class="px-4 py-2 bg-blue-500 text-white rounded-lg text-sm hover:bg-blue-600">➕ Nova</button>` : ''}
                             <button onclick="showDashboard()" class="px-4 py-2 bg-gray-500 text-white rounded-lg text-sm hover:bg-gray-600">← Voltar</button>
                             <button onclick="toggleDarkMode()" class="px-4 py-2 bg-gray-300 dark:bg-gray-700 rounded-lg text-sm">🌙</button>
                         </div>
@@ -278,12 +436,12 @@
                                     <th class="px-4 py-2 text-left">Usados</th>
                                     <th class="px-4 py-2 text-left">Restante</th>
                                     <th class="px-4 py-2 text-left">Status</th>
-                                    <th class="px-4 py-2 text-left">Ações</th>
+                                    ${podeAlterar ? '<th class="px-4 py-2 text-left">Ações</th>' : ''}
                                 </tr>
                             </thead>
                             <tbody>
                                 ${lista.length === 0 ? `
-                                    <tr><td colspan="11" class="text-center py-8 text-gray-500">Nenhuma bobina encontrada</td></tr>
+                                    <tr><td colspan="${podeAlterar ? 11 : 10}" class="text-center py-8 text-gray-500">Nenhuma bobina encontrada</td></tr>
                                 ` : lista.map(b => `
                                     <tr class="border-b dark:border-gray-700">
                                         <td class="px-4 py-2 font-medium">#${b.id}</td>
@@ -298,10 +456,11 @@
                                         <td class="px-4 py-2">
                                             <span class="px-2 py-1 rounded-full text-xs ${b.status === 'Nova' ? 'bg-green-100 text-green-700' : b.status === 'Em uso' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700'}">${b.status}</span>
                                         </td>
+                                        ${podeAlterar ? `
                                         <td class="px-4 py-2">
                                             <button onclick="editarBobina(${b.id})" class="text-blue-600 mr-2">✏️</button>
                                             <button onclick="excluirBobina(${b.id})" class="text-red-600">🗑️</button>
-                                        </td>
+                                        </td>` : ''}
                                     </tr>
                                 `).join('')}
                             </tbody>
@@ -323,6 +482,12 @@
         // FORMULÁRIO DE BOBINA
         // ============================================
         function showFormBobina(id = null) {
+            if (!podeAlterar()) {
+                alert('❌ Visitante não pode cadastrar bobinas!');
+                showBobinas();
+                return;
+            }
+
             const editando = id !== null;
             const b = editando ? bobinas.find(x => x.id === id) : null;
             if (editando && !b) { alert('Bobina não encontrada!'); showBobinas(); return; }
@@ -391,10 +556,17 @@
         }
 
         // ============================================
-        // FUNÇÕES CRUD (COM BANCO DE DADOS)
+        // FUNÇÕES CRUD
         // ============================================
         async function salvarBobina(event) {
             event.preventDefault();
+            
+            if (!podeAlterar()) {
+                alert('❌ Visitante não pode cadastrar bobinas!');
+                showBobinas();
+                return;
+            }
+
             const id = document.getElementById('editId').value;
             const localizacao = document.getElementById('fLocalizacao').value;
             const fabricante = document.getElementById('fFabricante').value;
@@ -445,9 +617,20 @@
             showBobinas();
         }
 
-        async function editarBobina(id) { showFormBobina(id); }
+        async function editarBobina(id) { 
+            if (!podeAlterar()) {
+                alert('❌ Visitante não pode editar bobinas!');
+                return;
+            }
+            showFormBobina(id); 
+        }
 
         async function excluirBobina(id) {
+            if (!podeAlterar()) {
+                alert('❌ Visitante não pode excluir bobinas!');
+                return;
+            }
+
             if (confirm('⚠️ Tem certeza?')) {
                 const sucesso = await excluirBobinaBD(id);
                 if (sucesso) {
@@ -475,6 +658,12 @@
         // TELA DE SAÍDA
         // ============================================
         function showSaida() {
+            if (!podeAlterar()) {
+                alert('❌ Visitante não pode registrar saídas!');
+                showDashboard();
+                return;
+            }
+
             const disponiveis = bobinas.filter(b => (b.metragem_inicial - b.metros_usados) > 0);
 
             document.getElementById('root').innerHTML = `
@@ -576,11 +765,17 @@
         }
 
         // ============================================
-        // FUNÇÃO PARA REGISTRAR SAÍDA (COM BANCO)
+        // FUNÇÃO PARA REGISTRAR SAÍDA (CORRIGIDA)
         // ============================================
         async function registrarSaida(event) {
             event.preventDefault();
             
+            if (!podeAlterar()) {
+                alert('❌ Visitante não pode registrar saídas!');
+                showDashboard();
+                return;
+            }
+
             const bobinaId = parseInt(document.getElementById('sBobinaId').value);
             const equipe = document.getElementById('sEquipe').value;
             const funcionario = document.getElementById('sFuncionario').value;
@@ -627,6 +822,7 @@
                 return; 
             }
 
+            // Calcular novos valores
             const novosMetrosUsados = bobina.metros_usados + metros;
             let novoStatus = bobina.status;
             const restante = bobina.metragem_inicial - novosMetrosUsados;
@@ -637,6 +833,7 @@
                 novoStatus = 'Em uso';
             }
 
+            // Atualizar no banco de dados
             const sucesso = await atualizarBobinaBD(bobinaId, {
                 metros_usados: novosMetrosUsados,
                 status: novoStatus
@@ -647,9 +844,11 @@
                 return;
             }
 
+            // Atualizar localmente
             bobina.metros_usados = novosMetrosUsados;
             bobina.status = novoStatus;
 
+            // Registrar movimentação no banco
             const now = new Date();
             const mov = {
                 bobina_id: bobinaId,
@@ -669,6 +868,7 @@
 
             alert(`✅ Saída registrada!\n📏 ${metros}m utilizados\n📦 Restante: ${restante}m`);
             
+            // Limpar formulário
             document.getElementById('sBobinaId').value = '';
             document.getElementById('sEquipe').value = '';
             document.getElementById('sFuncionario').value = '';
@@ -676,13 +876,18 @@
             document.getElementById('sMetros').value = '';
             document.getElementById('sObservacao').value = '';
             
-            showSaida();
+            // Recarregar dados e mostrar dashboard atualizado
+            await carregarDados();
+            showDashboard();
         }
 
         // ============================================
         // TELA DE RELATÓRIOS
         // ============================================
         function showRelatorios() {
+            const user = getUsuarioLogado();
+            if (!user) { showLogin(); return; }
+
             const totalBobinas = bobinas.length;
             const totalMetros = bobinas.reduce((t, b) => t + (b.metragem_inicial - b.metros_usados), 0);
             const totalConsumido = bobinas.reduce((t, b) => t + b.metros_usados, 0);
@@ -1109,17 +1314,6 @@
         // ============================================
         function toggleDarkMode() {
             document.documentElement.classList.toggle('dark');
-        }
-
-        function handleLogin(event) {
-            event.preventDefault();
-            const email = document.getElementById('email').value;
-            const senha = document.getElementById('senha').value;
-            if (email && senha) {
-                showDashboard();
-            } else {
-                alert('Preencha todos os campos!');
-            }
         }
 
         // ============================================
