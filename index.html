@@ -132,12 +132,10 @@
         // TELA DE RELATÓRIOS
         // ============================================
         function showRelatorios() {
-            // Calcular dados para os relatórios
             const totalBobinas = bobinas.length;
             const totalMetros = bobinas.reduce((t, b) => t + (b.metragemInicial - b.metrosUsados), 0);
             const totalConsumido = bobinas.reduce((t, b) => t + b.metrosUsados, 0);
             
-            // Consumo por empresa
             const empresas = {};
             movimentacoes.forEach(m => {
                 if (empresas[m.equipe]) {
@@ -147,7 +145,6 @@
                 }
             });
             
-            // Consumo por técnico
             const tecnicos = {};
             movimentacoes.forEach(m => {
                 if (tecnicos[m.funcionario]) {
@@ -157,15 +154,12 @@
                 }
             });
             
-            // Estoque baixo
             const estoqueBaixo = bobinas.filter(b => (b.metragemInicial - b.metrosUsados) < 500 && (b.metragemInicial - b.metrosUsados) > 0);
             
-            // Status
             const statusNova = bobinas.filter(b => b.status === 'Nova').length;
             const statusEmUso = bobinas.filter(b => b.status === 'Em uso').length;
             const statusFinalizada = bobinas.filter(b => b.status === 'Finalizada').length;
 
-            // Gerar HTML da lista de estoque baixo
             const listaEstoqueBaixo = estoqueBaixo.map(b => `
                 <div class="flex justify-between items-center p-2 bg-red-50 dark:bg-red-900/30 rounded-lg mb-1">
                     <span class="text-sm font-medium text-gray-800 dark:text-white">${b.fabricante} - ${b.lote} - ${b.tipo}</span>
@@ -173,7 +167,6 @@
                 </div>
             `).join('');
 
-            // Gerar HTML da lista de empresas
             const listaEmpresas = Object.keys(empresas).map(empresa => `
                 <div class="flex justify-between items-center p-2 bg-gray-50 dark:bg-gray-700 rounded-lg mb-1">
                     <span class="text-sm font-medium text-gray-800 dark:text-white">${empresa}</span>
@@ -181,7 +174,6 @@
                 </div>
             `).join('');
 
-            // Gerar HTML da lista de técnicos
             const listaTecnicos = Object.keys(tecnicos).map(tecnico => `
                 <div class="flex justify-between items-center p-2 bg-gray-50 dark:bg-gray-700 rounded-lg mb-1">
                     <span class="text-sm font-medium text-gray-800 dark:text-white">${tecnico}</span>
@@ -204,7 +196,6 @@
                         </div>
                     </div>
 
-                    <!-- Cards Resumo -->
                     <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                         <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow">
                             <p class="text-sm text-gray-500 dark:text-gray-400">📦 Total Bobinas</p>
@@ -224,7 +215,6 @@
                         </div>
                     </div>
 
-                    <!-- Gráfico de Status -->
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                         <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow">
                             <h2 class="text-lg font-semibold text-gray-800 dark:text-white mb-4">📌 Status das Bobinas</h2>
@@ -259,14 +249,12 @@
                             </div>
                         </div>
 
-                        <!-- Estoque Baixo -->
                         <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow">
                             <h2 class="text-lg font-semibold text-gray-800 dark:text-white mb-4">⚠️ Estoque Baixo (&lt; 500m)</h2>
                             ${estoqueBaixo.length > 0 ? listaEstoqueBaixo : '<p class="text-center text-gray-500 dark:text-gray-400 py-4">✅ Nenhuma bobina com estoque baixo!</p>'}
                         </div>
                     </div>
 
-                    <!-- Consumo por Empresa e Técnico -->
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                         <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow">
                             <h2 class="text-lg font-semibold text-gray-800 dark:text-white mb-4">🏢 Consumo por Empresa</h2>
@@ -278,7 +266,6 @@
                         </div>
                     </div>
 
-                    <!-- Tabela de Movimentações -->
                     <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow">
                         <h2 class="text-lg font-semibold text-gray-800 dark:text-white mb-4">📋 Todas as Movimentações</h2>
                         ${movimentacoes.length === 0 ? '<p class="text-center text-gray-500 dark:text-gray-400 py-4">Nenhuma movimentação registrada.</p>' : `
@@ -327,7 +314,6 @@
                 return;
             }
 
-            // Criar dados para o Excel
             let dados = 'Data,Bobina,Metros,Empresa,Tecnico,OS\n';
             movimentacoes.forEach(m => {
                 const bobina = bobinas.find(b => b.id === m.bobinaId);
@@ -335,7 +321,6 @@
                 dados += `${m.data},${nomeBobina},${m.metrosUtilizados},${m.equipe},${m.funcionario},${m.ordemServico || '-'}\n`;
             });
 
-            // Baixar arquivo
             const blob = new Blob([dados], { type: 'text/csv;charset=utf-8;' });
             const link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
@@ -350,7 +335,6 @@
                 return;
             }
 
-            // Gerar conteúdo do PDF
             let conteudo = 'FIBERMANAGER - RELATÓRIO\n';
             conteudo += '='.repeat(50) + '\n';
             conteudo += `Data: ${new Date().toLocaleDateString('pt-BR')}\n\n`;
@@ -372,7 +356,6 @@
                 conteudo += `${m.data} | ${nomeBobina} | ${m.metrosUtilizados}m | ${m.equipe} | ${m.funcionario}\n`;
             });
 
-            // Baixar arquivo
             const blob = new Blob([conteudo], { type: 'text/plain;charset=utf-8;' });
             const link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
