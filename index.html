@@ -64,7 +64,6 @@
         function showDashboard() {
             const total = bobinas.length;
             const metros = bobinas.reduce((t, b) => t + (b.metragemInicial - b.metrosUsados), 0);
-            // ALTERADO: estoque baixo agora é < 1500m
             const alerta = bobinas.filter(b => (b.metragemInicial - b.metrosUsados) < 1500 && (b.metragemInicial - b.metrosUsados) > 0).length;
             const consumoDia = movimentacoes.filter(m => m.data === new Date().toLocaleDateString('pt-BR')).reduce((t, m) => t + m.metrosUtilizados, 0);
 
@@ -130,14 +129,13 @@
         }
 
         // ============================================
-        // TELA DE RELATÓRIOS (ATUALIZADA)
+        // TELA DE RELATÓRIOS
         // ============================================
         function showRelatorios() {
             const totalBobinas = bobinas.length;
             const totalMetros = bobinas.reduce((t, b) => t + (b.metragemInicial - b.metrosUsados), 0);
             const totalConsumido = bobinas.reduce((t, b) => t + b.metrosUsados, 0);
             
-            // Consumo por empresa
             const empresas = {};
             movimentacoes.forEach(m => {
                 if (empresas[m.equipe]) {
@@ -147,7 +145,6 @@
                 }
             });
             
-            // Consumo por técnico
             const tecnicos = {};
             movimentacoes.forEach(m => {
                 if (tecnicos[m.funcionario]) {
@@ -157,7 +154,6 @@
                 }
             });
             
-            // Consumo por bobina
             const consumoBobinas = {};
             movimentacoes.forEach(m => {
                 const bobina = bobinas.find(b => b.id === m.bobinaId);
@@ -169,17 +165,14 @@
                 }
             });
             
-            // ESTOQUE BAIXO - ALTERADO PARA < 1500m
             const estoqueBaixo = bobinas.filter(b => (b.metragemInicial - b.metrosUsados) < 1500 && (b.metragemInicial - b.metrosUsados) > 0);
             
             const statusNova = bobinas.filter(b => b.status === 'Nova').length;
             const statusEmUso = bobinas.filter(b => b.status === 'Em uso').length;
             const statusFinalizada = bobinas.filter(b => b.status === 'Finalizada').length;
 
-            // Ordenar consumo por bobina (maior para menor)
             const sortedConsumoBobinas = Object.keys(consumoBobinas).sort((a, b) => consumoBobinas[b] - consumoBobinas[a]);
 
-            // Gerar HTML do gráfico de consumo por bobina
             const maxConsumo = Math.max(...Object.values(consumoBobinas), 1);
             const graficoBobinas = sortedConsumoBobinas.slice(0, 10).map(nome => {
                 const valor = consumoBobinas[nome];
@@ -233,7 +226,6 @@
                         </div>
                     </div>
 
-                    <!-- Cards Resumo -->
                     <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                         <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow">
                             <p class="text-sm text-gray-500 dark:text-gray-400">📦 Total Bobinas</p>
@@ -253,7 +245,6 @@
                         </div>
                     </div>
 
-                    <!-- Status e Estoque Baixo -->
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                         <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow">
                             <h2 class="text-lg font-semibold text-gray-800 dark:text-white mb-4">📌 Status das Bobinas</h2>
@@ -288,14 +279,12 @@
                             </div>
                         </div>
 
-                        <!-- ESTOQUE BAIXO - ALTERADO PARA < 1500m -->
                         <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow">
                             <h2 class="text-lg font-semibold text-gray-800 dark:text-white mb-4">⚠️ Estoque Baixo (&lt; 1500m)</h2>
                             ${estoqueBaixo.length > 0 ? listaEstoqueBaixo : '<p class="text-center text-gray-500 dark:text-gray-400 py-4">✅ Nenhuma bobina com estoque baixo!</p>'}
                         </div>
                     </div>
 
-                    <!-- Consumo por Empresa, Técnico e Bobina -->
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
                         <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow">
                             <h2 class="text-lg font-semibold text-gray-800 dark:text-white mb-4">🏢 Consumo por Empresa</h2>
@@ -311,7 +300,6 @@
                         </div>
                     </div>
 
-                    <!-- Tabela de Movimentações -->
                     <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow">
                         <h2 class="text-lg font-semibold text-gray-800 dark:text-white mb-4">📋 Todas as Movimentações</h2>
                         ${movimentacoes.length === 0 ? '<p class="text-center text-gray-500 dark:text-gray-400 py-4">Nenhuma movimentação registrada.</p>' : `
@@ -352,7 +340,7 @@
         }
 
         // ============================================
-        // FUNÇÕES DE EXPORTAÇÃO (ATUALIZADAS)
+        // EXPORTAÇÃO EXCEL (CORRIGIDA)
         // ============================================
         function exportarExcel() {
             if (movimentacoes.length === 0) {
@@ -360,56 +348,258 @@
                 return;
             }
 
-            // Cabeçalhos separados por vírgula (CSV)
-            let dados = 'Data,Bobina,Metros,Empresa,Tecnico,OS\n';
+            let dados = 'Data;Bobina;Metros;Empresa;Tecnico;OS\n';
             movimentacoes.forEach(m => {
                 const bobina = bobinas.find(b => b.id === m.bobinaId);
                 const nomeBobina = bobina ? `${bobina.fabricante} - ${bobina.lote} - ${bobina.tipo}` : '#' + m.bobinaId;
-                dados += `${m.data},${nomeBobina},${m.metrosUtilizados},${m.equipe},${m.funcionario},${m.ordemServico || '-'}\n`;
+                dados += `${m.data};${nomeBobina};${m.metrosUtilizados};${m.equipe};${m.funcionario};${m.ordemServico || '-'}\n`;
             });
 
-            // Criar arquivo CSV com separador correto
             const blob = new Blob([dados], { type: 'text/csv;charset=utf-8;' });
             const link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
             link.download = `relatorio_fibermanager_${new Date().toLocaleDateString('pt-BR').replace(/\//g, '-')}.csv`;
+            document.body.appendChild(link);
             link.click();
-            alert('✅ Relatório exportado com sucesso!');
+            document.body.removeChild(link);
+            alert('✅ Relatório exportado com sucesso!\n\n📌 Dica: Ao abrir no Excel, use o separador ";" (ponto e vírgula)');
         }
 
+        // ============================================
+        // EXPORTAÇÃO PDF (CORRIGIDA)
+        // ============================================
         function exportarPDF() {
             if (movimentacoes.length === 0) {
                 alert('❌ Não há dados para exportar!');
                 return;
             }
 
-            let conteudo = 'FIBERMANAGER - RELATÓRIO\n';
-            conteudo += '='.repeat(50) + '\n';
-            conteudo += `Data: ${new Date().toLocaleDateString('pt-BR')}\n\n`;
-            
-            conteudo += '📊 RESUMO\n';
-            conteudo += '-'.repeat(30) + '\n';
-            conteudo += `Total de Bobinas: ${bobinas.length}\n`;
-            const totalMetros = bobinas.reduce((t, b) => t + (b.metragemInicial - b.metrosUsados), 0);
-            conteudo += `Metros Disponíveis: ${totalMetros}m\n`;
-            const totalConsumido = bobinas.reduce((t, b) => t + b.metrosUsados, 0);
-            conteudo += `Total Consumido: ${totalConsumido}m\n`;
-            conteudo += `Total de Movimentações: ${movimentacoes.length}\n\n`;
+            let html = `
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <title>Relatório FiberManager</title>
+                <style>
+                    body { 
+                        font-family: Arial, sans-serif; 
+                        margin: 40px; 
+                        color: #333;
+                    }
+                    .header {
+                        text-align: center;
+                        border-bottom: 3px solid #4F46E5;
+                        padding-bottom: 20px;
+                        margin-bottom: 30px;
+                    }
+                    .header h1 {
+                        color: #4F46E5;
+                        font-size: 28px;
+                        margin: 0;
+                    }
+                    .header p {
+                        color: #666;
+                        font-size: 14px;
+                        margin: 5px 0 0 0;
+                    }
+                    .info-grid {
+                        display: grid;
+                        grid-template-columns: repeat(4, 1fr);
+                        gap: 15px;
+                        margin-bottom: 30px;
+                    }
+                    .info-card {
+                        background: #f8f9fa;
+                        padding: 15px;
+                        border-radius: 8px;
+                        text-align: center;
+                        border: 1px solid #e9ecef;
+                    }
+                    .info-card .label {
+                        font-size: 12px;
+                        color: #666;
+                        margin-bottom: 5px;
+                    }
+                    .info-card .value {
+                        font-size: 20px;
+                        font-weight: bold;
+                        color: #1a1a2e;
+                    }
+                    .info-card .value.orange { color: #f97316; }
+                    .info-card .value.green { color: #22c55e; }
+                    .info-card .value.red { color: #ef4444; }
+                    
+                    .section-title {
+                        font-size: 18px;
+                        font-weight: bold;
+                        color: #1a1a2e;
+                        border-bottom: 2px solid #e9ecef;
+                        padding-bottom: 10px;
+                        margin-top: 30px;
+                        margin-bottom: 15px;
+                    }
+                    
+                    table {
+                        width: 100%;
+                        border-collapse: collapse;
+                        font-size: 13px;
+                    }
+                    th {
+                        background: #4F46E5;
+                        color: white;
+                        padding: 10px 12px;
+                        text-align: left;
+                    }
+                    td {
+                        padding: 8px 12px;
+                        border-bottom: 1px solid #e9ecef;
+                    }
+                    tr:nth-child(even) {
+                        background: #f8f9fa;
+                    }
+                    
+                    .footer {
+                        text-align: center;
+                        color: #999;
+                        font-size: 12px;
+                        margin-top: 40px;
+                        padding-top: 20px;
+                        border-top: 1px solid #e9ecef;
+                    }
+                    
+                    .alert-box {
+                        background: #fef2f2;
+                        border: 1px solid #fecaca;
+                        border-radius: 8px;
+                        padding: 15px;
+                        margin-top: 15px;
+                    }
+                    .alert-box .alert-item {
+                        display: flex;
+                        justify-content: space-between;
+                        padding: 5px 0;
+                        border-bottom: 1px solid #fecaca;
+                    }
+                    .alert-box .alert-item:last-child {
+                        border-bottom: none;
+                    }
+                    .alert-box .alert-item .metros {
+                        font-weight: bold;
+                        color: #dc2626;
+                    }
+                    
+                    @media print {
+                        body { margin: 20px; }
+                        .no-print { display: none; }
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="header">
+                    <h1>🔷 FiberManager</h1>
+                    <p>Relatório de Movimentações</p>
+                    <p style="font-size: 12px; color: #999;">Gerado em: ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')}</p>
+                </div>
+            `;
 
-            conteudo += '📋 MOVIMENTAÇÕES\n';
-            conteudo += '-'.repeat(30) + '\n';
-            movimentacoes.forEach(m => {
+            const totalBobinas = bobinas.length;
+            const totalMetros = bobinas.reduce((t, b) => t + (b.metragemInicial - b.metrosUsados), 0);
+            const totalConsumido = bobinas.reduce((t, b) => t + b.metrosUsados, 0);
+            
+            html += `
+                <div class="info-grid">
+                    <div class="info-card">
+                        <div class="label">📦 Total Bobinas</div>
+                        <div class="value">${totalBobinas}</div>
+                    </div>
+                    <div class="info-card">
+                        <div class="label">📏 Metros Disponíveis</div>
+                        <div class="value green">${totalMetros}m</div>
+                    </div>
+                    <div class="info-card">
+                        <div class="label">📉 Total Consumido</div>
+                        <div class="value orange">${totalConsumido}m</div>
+                    </div>
+                    <div class="info-card">
+                        <div class="label">📋 Movimentações</div>
+                        <div class="value">${movimentacoes.length}</div>
+                    </div>
+                </div>
+            `;
+
+            const estoqueBaixo = bobinas.filter(b => (b.metragemInicial - b.metrosUsados) < 1500 && (b.metragemInicial - b.metrosUsados) > 0);
+            if (estoqueBaixo.length > 0) {
+                html += `
+                    <div class="section-title">⚠️ Estoque Baixo (&lt; 1500m)</div>
+                    <div class="alert-box">
+                        ${estoqueBaixo.map(b => `
+                            <div class="alert-item">
+                                <span>${b.fabricante} - ${b.lote} - ${b.tipo}</span>
+                                <span class="metros">${b.metragemInicial - b.metrosUsados}m</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            }
+
+            html += `
+                <div class="section-title">📋 Movimentações</div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Data</th>
+                            <th>Bobina</th>
+                            <th>Metros</th>
+                            <th>Empresa</th>
+                            <th>Técnico</th>
+                            <th>OS</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            movimentacoes.slice().reverse().forEach(m => {
                 const bobina = bobinas.find(b => b.id === m.bobinaId);
                 const nomeBobina = bobina ? `${bobina.fabricante} - ${bobina.lote} - ${bobina.tipo}` : '#' + m.bobinaId;
-                conteudo += `${m.data} | ${nomeBobina} | ${m.metrosUtilizados}m | ${m.equipe} | ${m.funcionario}\n`;
+                html += `
+                    <tr>
+                        <td>${m.data}</td>
+                        <td>${nomeBobina}</td>
+                        <td><strong>${m.metrosUtilizados}m</strong></td>
+                        <td>${m.equipe}</td>
+                        <td>${m.funcionario}</td>
+                        <td>${m.ordemServico || '-'}</td>
+                    </tr>
+                `;
             });
 
-            const blob = new Blob([conteudo], { type: 'text/plain;charset=utf-8;' });
-            const link = document.createElement('a');
-            link.href = URL.createObjectURL(blob);
-            link.download = `relatorio_fibermanager_${new Date().toLocaleDateString('pt-BR').replace(/\//g, '-')}.txt`;
-            link.click();
-            alert('✅ Relatório exportado com sucesso!');
+            html += `
+                    </tbody>
+                </table>
+                <div class="footer">
+                    <p>© 2026 FiberManager - Todos os direitos reservados</p>
+                    <p>Este relatório foi gerado automaticamente pelo sistema FiberManager.</p>
+                </div>
+                <div style="text-align: center; margin-top: 20px;">
+                    <button onclick="window.print()" style="padding: 10px 30px; background: #4F46E5; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer;">
+                        🖨️ Imprimir / Salvar como PDF
+                    </button>
+                    <button onclick="window.close()" style="padding: 10px 30px; background: #6b7280; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; margin-left: 10px;">
+                        ✕ Fechar
+                    </button>
+                </div>
+            </body>
+            </html>
+            `;
+
+            const win = window.open('', '_blank', 'width=1000,height=800');
+            win.document.write(html);
+            win.document.close();
+            win.focus();
+            
+            setTimeout(() => {
+                alert('✅ Relatório PDF aberto!\n\n📌 Clique em "Imprimir" para salvar como PDF.');
+            }, 500);
         }
 
         // ============================================
