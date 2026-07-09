@@ -106,7 +106,7 @@
                         ${movimentacoes.length === 0 ? '<p class="text-center text-gray-500 dark:text-gray-400 py-4">Nenhuma movimentação registrada.</p>' : 
                             movimentacoes.slice(-5).reverse().map(m => {
                                 const bobina = bobinas.find(b => b.id === m.bobinaId);
-                                const nomeBobina = bobina ? bobina.localizacao : '#' + m.bobinaId;
+                                const nomeBobina = bobina ? `${bobina.fabricante} - ${bobina.lote} - ${bobina.tipo}` : '#' + m.bobinaId;
                                 return `
                                     <div class="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-700 rounded-lg mb-2">
                                         <div>
@@ -349,7 +349,7 @@
         }
 
         // ============================================
-        // TELA DE SAÍDA (COM CORREÇÕES)
+        // TELA DE SAÍDA (FABRICANTE + LOTE + TIPO)
         // ============================================
         function showSaida() {
             const disponiveis = bobinas.filter(b => (b.metragemInicial - b.metrosUsados) > 0);
@@ -375,7 +375,7 @@
                                 <select id="sBobinaId" class="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white" required>
                                     <option value="">Selecione uma bobina...</option>
                                     ${disponiveis.map(b => `
-                                        <option value="${b.id}">${b.localizacao} (${b.metragemInicial - b.metrosUsados}m disponíveis)</option>
+                                        <option value="${b.id}">${b.fabricante} - ${b.lote} - ${b.tipo} (${b.metragemInicial - b.metrosUsados}m disponíveis)</option>
                                     `).join('')}
                                 </select>
                                 ${disponiveis.length === 0 ? '<p class="text-red-500 text-sm mt-1">⚠️ Nenhuma bobina disponível!</p>' : ''}
@@ -431,7 +431,7 @@
                                     <tbody>
                                         ${movimentacoes.slice().reverse().map(m => {
                                             const bobina = bobinas.find(b => b.id === m.bobinaId);
-                                            const nomeBobina = bobina ? bobina.localizacao : '#' + m.bobinaId;
+                                            const nomeBobina = bobina ? `${bobina.fabricante} - ${bobina.lote} - ${bobina.tipo}` : '#' + m.bobinaId;
                                             return `
                                                 <tr class="border-b dark:border-gray-700">
                                                     <td class="px-4 py-2">${m.data}</td>
@@ -490,7 +490,7 @@
             
             // Se metros for 0 ou não preenchido, perguntar se quer usar 0
             if (metros === 0) {
-                if (!confirm(`⚠️ Você está registrando 0 metros para a bobina ${bobina.localizacao}.\n\nDeseja continuar?`)) {
+                if (!confirm(`⚠️ Você está registrando 0 metros para a bobina ${bobina.fabricante} - ${bobina.lote} - ${bobina.tipo}.\n\nDeseja continuar?`)) {
                     return;
                 }
             }
