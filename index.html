@@ -1,82 +1,227 @@
         // ============================================
-        // TELA DE LOGIN (COM BOTÃO CALCULADORA)
+        // CALCULADORA DE POTÊNCIA DE ENLACE ÓPTICO (TELA COMPLETA - SEM LOGIN)
         // ============================================
-        function showLogin() {
-            const user = getUsuarioLogado();
-            if (user) {
-                showDashboard();
-                return;
-            }
-
+        function showCalculadoraLogin() {
             document.getElementById('root').innerHTML = `
-                <div class="min-h-screen bg-gradient-to-br from-indigo-50 to-blue-50 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center p-4">
-                    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md p-8">
-                        <div class="flex justify-end">
-                            <button onclick="toggleDarkMode()" class="text-2xl">🌙</button>
+                <div class="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 md:p-6">
+                    <!-- Cabeçalho -->
+                    <div class="flex flex-wrap justify-between items-center mb-6">
+                        <div>
+                            <h1 class="text-2xl md:text-3xl font-bold text-gray-800 dark:text-white">📐 Calculadora de Potência de Enlace Óptico FTTH</h1>
+                            <p class="text-gray-500 dark:text-gray-400">Calcule a potência recebida e a margem do enlace óptico</p>
                         </div>
-                        <div class="text-center mb-8">
-                            <div class="text-6xl mb-3">📋</div>
-                            <h1 class="text-4xl font-bold bg-gradient-to-r from-indigo-600 to-blue-600 bg-clip-text text-transparent">
-                                SGAPM
-                            </h1>
-                            <p class="text-gray-500 dark:text-gray-400 mt-2 text-sm">
-                                Sistema de Gerenciamento Área de Projetos e Manutenção
-                            </p>
+                        <div class="flex flex-wrap gap-2 mt-3 md:mt-0">
+                            <button onclick="showLogin()" class="px-4 py-2 bg-gray-500 text-white rounded-lg text-sm hover:bg-gray-600">← Voltar ao Login</button>
+                            <button onclick="toggleDarkMode()" class="px-4 py-2 bg-gray-300 dark:bg-gray-700 rounded-lg text-sm">🌙</button>
                         </div>
+                    </div>
 
-                        <!-- Formulário de Login -->
-                        <form onsubmit="handleLogin(event)" class="space-y-4">
+                    <!-- Conteúdo da Calculadora -->
+                    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 md:p-8 max-w-4xl mx-auto">
+                        <form id="formCalculadora" onsubmit="calcularEnlaceLogin(event)" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <!-- Distância da Fibra -->
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">📧 E-mail</label>
-                                <input type="email" id="email" placeholder="seu@email.com" class="w-full px-4 py-3 border rounded-lg dark:bg-gray-700 dark:text-white" required>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">📏 Distância da Fibra (Km)</label>
+                                <input type="number" id="distancia" value="1" step="0.1" min="0" class="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white" required>
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">🔒 Senha</label>
-                                <input type="password" id="senha" placeholder="••••••••" class="w-full px-4 py-3 border rounded-lg dark:bg-gray-700 dark:text-white" required>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">📉 Perda em dB por Km</label>
+                                <input type="number" id="perdaKm" value="0.35" step="0.01" min="0" class="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white" required>
                             </div>
-                            <button type="submit" class="w-full bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white font-bold py-3 rounded-lg transition shadow-lg">
-                                Entrar
-                            </button>
+
+                            <!-- Splitters 1x2 -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">🔀 Qtd de Splitters 1x2</label>
+                                <input type="number" id="splitter2" value="0" min="0" class="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white" oninput="atualizarPerdaSplitterLogin('splitter2', 'perdaSplitter2', 3.6)">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">📊 Perda em dB (1x2)</label>
+                                <input type="number" id="perdaSplitter2" value="0" step="0.1" min="0" class="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white">
+                            </div>
+
+                            <!-- Splitters 1x4 -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">🔀 Qtd de Splitters 1x4</label>
+                                <input type="number" id="splitter4" value="0" min="0" class="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white" oninput="atualizarPerdaSplitterLogin('splitter4', 'perdaSplitter4', 7.2)">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">📊 Perda em dB (1x4)</label>
+                                <input type="number" id="perdaSplitter4" value="0" step="0.1" min="0" class="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white">
+                            </div>
+
+                            <!-- Splitters 1x8 -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">🔀 Qtd de Splitters 1x8</label>
+                                <input type="number" id="splitter8" value="0" min="0" class="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white" oninput="atualizarPerdaSplitterLogin('splitter8', 'perdaSplitter8', 10.8)">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">📊 Perda em dB (1x8)</label>
+                                <input type="number" id="perdaSplitter8" value="0" step="0.1" min="0" class="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white">
+                            </div>
+
+                            <!-- Splitters 1x16 -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">🔀 Qtd de Splitters 1x16</label>
+                                <input type="number" id="splitter16" value="0" min="0" class="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white" oninput="atualizarPerdaSplitterLogin('splitter16', 'perdaSplitter16', 13.8)">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">📊 Perda em dB (1x16)</label>
+                                <input type="number" id="perdaSplitter16" value="0" step="0.1" min="0" class="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white">
+                            </div>
+
+                            <!-- Splitters 1x32 -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">🔀 Qtd de Splitters 1x32</label>
+                                <input type="number" id="splitter32" value="0" min="0" class="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white" oninput="atualizarPerdaSplitterLogin('splitter32', 'perdaSplitter32', 16.8)">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">📊 Perda em dB (1x32)</label>
+                                <input type="number" id="perdaSplitter32" value="0" step="0.1" min="0" class="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white">
+                            </div>
+
+                            <!-- Emendas por Fusão -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">🔗 Qtd de Emendas por Fusão</label>
+                                <input type="number" id="emendaFusao" value="0" min="0" class="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white" oninput="atualizarPerdaSplitterLogin('emendaFusao', 'perdaFusao', 0.1)">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">📊 Perda em dB (Fusão)</label>
+                                <input type="number" id="perdaFusao" value="0" step="0.01" min="0" class="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white">
+                            </div>
+
+                            <!-- Emendas Mecânicas -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">🔗 Qtd de Emendas Mecânicas</label>
+                                <input type="number" id="emendaMecanica" value="0" min="0" class="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white" oninput="atualizarPerdaSplitterLogin('emendaMecanica', 'perdaMecanica', 0.2)">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">📊 Perda em dB (Mecânica)</label>
+                                <input type="number" id="perdaMecanica" value="0" step="0.01" min="0" class="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white">
+                            </div>
+
+                            <!-- Conectores -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">🔌 Qtd de Conectores</label>
+                                <input type="number" id="conector" value="0" min="0" class="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white" oninput="atualizarPerdaSplitterLogin('conector', 'perdaConector', 0.5)">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">📊 Perda em dB (Conector)</label>
+                                <input type="number" id="perdaConector" value="0" step="0.1" min="0" class="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white">
+                            </div>
+
+                            <!-- Potência do Transmissor -->
+                            <div class="md:col-span-2">
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">📤 Potência do Transmissor (dBm)</label>
+                                <input type="number" id="potenciaTransmissor" value="3" step="0.1" class="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white" required>
+                            </div>
+
+                            <!-- Botões -->
+                            <div class="md:col-span-2 flex gap-3 mt-2">
+                                <button type="submit" class="flex-1 bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 rounded-lg transition">📊 Calcular Enlace</button>
+                                <button type="reset" class="flex-1 bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-white font-bold py-3 rounded-lg transition" onclick="limparCalculadoraLogin()">🔄 Limpar</button>
+                            </div>
                         </form>
 
-                        <!-- DIVISOR -->
-                        <div class="relative my-6">
-                            <div class="absolute inset-0 flex items-center">
-                                <div class="w-full border-t border-gray-300 dark:border-gray-600"></div>
-                            </div>
-                            <div class="relative flex justify-center text-sm">
-                                <span class="px-2 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400">ou</span>
+                        <!-- Resultados -->
+                        <div id="resultadoCalculadoraLogin" class="mt-6 hidden">
+                            <div class="border-t border-gray-200 dark:border-gray-700 pt-6">
+                                <h2 class="text-xl font-bold text-gray-800 dark:text-white mb-4">📊 Resultados do Enlace</h2>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+                                        <p class="text-sm text-gray-500 dark:text-gray-400">Perda Total</p>
+                                        <p id="perdaTotalLogin" class="text-2xl font-bold text-red-600">0.00 dB</p>
+                                    </div>
+                                    <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+                                        <p class="text-sm text-gray-500 dark:text-gray-400">Potência Recebida</p>
+                                        <p id="potenciaRecebidaLogin" class="text-2xl font-bold text-blue-600">0.00 dBm</p>
+                                    </div>
+                                    <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+                                        <p class="text-sm text-gray-500 dark:text-gray-400">Sensibilidade do Receptor</p>
+                                        <p class="text-2xl font-bold text-gray-800 dark:text-white">-28.00 dBm</p>
+                                    </div>
+                                    <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+                                        <p class="text-sm text-gray-500 dark:text-gray-400">Margem do Enlace</p>
+                                        <p id="margemEnlaceLogin" class="text-2xl font-bold text-green-600">0.00 dB</p>
+                                    </div>
+                                </div>
+                                <div id="statusEnlaceLogin" class="mt-4 p-4 rounded-lg text-center font-bold text-lg">
+                                </div>
                             </div>
                         </div>
-
-                        <!-- BOTÃO VISITANTE -->
-                        <button onclick="entrarComoVisitante()" class="w-full bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-white font-bold py-3 rounded-lg transition shadow-lg flex items-center justify-center gap-2 mb-3">
-                            👀 Área do Visitante
-                        </button>
-                        <p class="text-xs text-center text-gray-500 dark:text-gray-400 mt-1">
-                            Acesse como visitante para visualizar o sistema sem fazer login
-                        </p>
-
-                        <!-- DIVISOR -->
-                        <div class="relative my-6">
-                            <div class="absolute inset-0 flex items-center">
-                                <div class="w-full border-t border-gray-300 dark:border-gray-600"></div>
-                            </div>
-                            <div class="relative flex justify-center text-sm">
-                                <span class="px-2 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400">ferramenta</span>
-                            </div>
-                        </div>
-
-                        <!-- BOTÃO CALCULADORA -->
-                        <button onclick="showCalculadoraLogin()" class="w-full bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-3 rounded-lg transition shadow-lg flex items-center justify-center gap-2">
-                            📐 Calculadora de Enlace Óptico
-                        </button>
-                        <p class="text-xs text-center text-gray-500 dark:text-gray-400 mt-1">
-                            Calcule a potência de enlace sem precisar fazer login
-                        </p>
-
-                        <div class="mt-8 text-center text-xs text-gray-500">© 2026 SGAPM</div>
                     </div>
                 </div>
             `;
+        }
+
+        // ============================================
+        // FUNÇÕES DA CALCULADORA (VERSÃO LOGIN)
+        // ============================================
+        function atualizarPerdaSplitterLogin(inputId, perdaId, valorPerda) {
+            const qtd = parseFloat(document.getElementById(inputId).value) || 0;
+            document.getElementById(perdaId).value = (qtd * valorPerda).toFixed(2);
+        }
+
+        function limparCalculadoraLogin() {
+            document.getElementById('resultadoCalculadoraLogin').classList.add('hidden');
+            document.getElementById('distancia').value = 1;
+            document.getElementById('perdaKm').value = 0.35;
+            document.getElementById('splitter2').value = 0;
+            document.getElementById('perdaSplitter2').value = 0;
+            document.getElementById('splitter4').value = 0;
+            document.getElementById('perdaSplitter4').value = 0;
+            document.getElementById('splitter8').value = 0;
+            document.getElementById('perdaSplitter8').value = 0;
+            document.getElementById('splitter16').value = 0;
+            document.getElementById('perdaSplitter16').value = 0;
+            document.getElementById('splitter32').value = 0;
+            document.getElementById('perdaSplitter32').value = 0;
+            document.getElementById('emendaFusao').value = 0;
+            document.getElementById('perdaFusao').value = 0;
+            document.getElementById('emendaMecanica').value = 0;
+            document.getElementById('perdaMecanica').value = 0;
+            document.getElementById('conector').value = 0;
+            document.getElementById('perdaConector').value = 0;
+            document.getElementById('potenciaTransmissor').value = 3;
+        }
+
+        function calcularEnlaceLogin(event) {
+            event.preventDefault();
+
+            const distancia = parseFloat(document.getElementById('distancia').value) || 0;
+            const perdaKm = parseFloat(document.getElementById('perdaKm').value) || 0;
+            const perdaSplitter2 = parseFloat(document.getElementById('perdaSplitter2').value) || 0;
+            const perdaSplitter4 = parseFloat(document.getElementById('perdaSplitter4').value) || 0;
+            const perdaSplitter8 = parseFloat(document.getElementById('perdaSplitter8').value) || 0;
+            const perdaSplitter16 = parseFloat(document.getElementById('perdaSplitter16').value) || 0;
+            const perdaSplitter32 = parseFloat(document.getElementById('perdaSplitter32').value) || 0;
+            const perdaFusao = parseFloat(document.getElementById('perdaFusao').value) || 0;
+            const perdaMecanica = parseFloat(document.getElementById('perdaMecanica').value) || 0;
+            const perdaConector = parseFloat(document.getElementById('perdaConector').value) || 0;
+            const potenciaTx = parseFloat(document.getElementById('potenciaTransmissor').value) || 0;
+
+            const perdaFibra = distancia * perdaKm;
+            const perdaTotal = perdaFibra + perdaSplitter2 + perdaSplitter4 + perdaSplitter8 + 
+                              perdaSplitter16 + perdaSplitter32 + perdaFusao + perdaMecanica + perdaConector;
+
+            const potenciaRx = potenciaTx - perdaTotal;
+            const sensibilidade = -28;
+            const margem = potenciaRx - sensibilidade;
+
+            document.getElementById('perdaTotalLogin').textContent = perdaTotal.toFixed(2) + ' dB';
+            document.getElementById('potenciaRecebidaLogin').textContent = potenciaRx.toFixed(2) + ' dBm';
+            document.getElementById('margemEnlaceLogin').textContent = margem.toFixed(2) + ' dB';
+
+            const statusDiv = document.getElementById('statusEnlaceLogin');
+            if (margem > 3) {
+                statusDiv.className = 'mt-4 p-4 rounded-lg text-center font-bold text-lg bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300';
+                statusDiv.textContent = '✅ Enlace ÓTIMO - Margem: ' + margem.toFixed(2) + ' dB';
+            } else if (margem > 0) {
+                statusDiv.className = 'mt-4 p-4 rounded-lg text-center font-bold text-lg bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300';
+                statusDiv.textContent = '⚠️ Enlace MARGINAL - Margem: ' + margem.toFixed(2) + ' dB (recomendado > 3dB)';
+            } else {
+                statusDiv.className = 'mt-4 p-4 rounded-lg text-center font-bold text-lg bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300';
+                statusDiv.textContent = '❌ Enlace INSUFICIENTE - Margem: ' + margem.toFixed(2) + ' dB (necessário > 0dB)';
+            }
+
+            document.getElementById('resultadoCalculadoraLogin').classList.remove('hidden');
         }
