@@ -22,7 +22,10 @@
         const USUARIOS = {
             'admin@sgapm.com': { senha: 'admin123', nome: 'Administrador', tipo: 'admin' },
             'usuario@sgapm.com': { senha: 'user123', nome: 'Usuário', tipo: 'usuario' },
-            'visitante@sgapm.com': { senha: 'visitante', nome: 'Visitante', tipo: 'visitante' }
+            'visitante@sgapm.com': { senha: 'visitante', nome: 'Visitante', tipo: 'visitante' },
+            // NOVOS USUÁRIOS
+            'victor.ues@mixtel.com.br': { senha: '2580', nome: 'Victor Ues', tipo: 'usuario' },
+            'rafael.silva@mixtel.com.br': { senha: '1234', nome: 'Rafael Silva', tipo: 'usuario' }
         };
 
         // ============================================
@@ -225,7 +228,7 @@
         }
 
         // ============================================
-        // TELA DE LOGIN
+        // TELA DE LOGIN (COM BOTÃO VISITANTE)
         // ============================================
         function showLogin() {
             const user = getUsuarioLogado();
@@ -262,15 +265,53 @@
                                 Entrar
                             </button>
                         </form>
-                        <div class="mt-6 text-center">
-                            <p class="text-sm text-gray-500 dark:text-gray-400">👀 <strong>Visitante:</strong> visitante@sgapm.com / visitante</p>
-                            <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">👑 <strong>Admin:</strong> admin@sgapm.com / admin123</p>
-                            <p class="text-xs text-gray-400 dark:text-gray-500">👤 <strong>Usuário:</strong> usuario@sgapm.com / user123</p>
+
+                        <!-- DIVISOR -->
+                        <div class="relative my-6">
+                            <div class="absolute inset-0 flex items-center">
+                                <div class="w-full border-t border-gray-300 dark:border-gray-600"></div>
+                            </div>
+                            <div class="relative flex justify-center text-sm">
+                                <span class="px-2 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400">ou</span>
+                            </div>
                         </div>
-                        <div class="mt-8 text-center text-xs text-gray-500">© 2026 SGAPM</div>
+
+                        <!-- BOTÃO VISITANTE -->
+                        <button onclick="entrarComoVisitante()" class="w-full bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-white font-bold py-3 rounded-lg transition shadow-lg flex items-center justify-center gap-2">
+                            👀 Área do Visitante
+                        </button>
+                        <p class="text-xs text-center text-gray-500 dark:text-gray-400 mt-2">
+                            Acesse como visitante para visualizar o sistema sem fazer login
+                        </p>
+
+                        <div class="mt-6 text-center">
+                            <p class="text-xs text-gray-400 dark:text-gray-500">
+                                👑 <strong>Admin:</strong> admin@sgapm.com / admin123
+                            </p>
+                            <p class="text-xs text-gray-400 dark:text-gray-500">
+                                👤 <strong>Victor:</strong> victor.ues@mixtel.com.br / 2580
+                            </p>
+                            <p class="text-xs text-gray-400 dark:text-gray-500">
+                                👤 <strong>Rafael:</strong> rafael.silva@mixtel.com.br / 1234
+                            </p>
+                        </div>
+                        <div class="mt-4 text-center text-xs text-gray-500">© 2026 SGAPM</div>
                     </div>
                 </div>
             `;
+        }
+
+        // ============================================
+        // FUNÇÃO PARA ENTRAR COMO VISITANTE
+        // ============================================
+        function entrarComoVisitante() {
+            usuarioAtual = {
+                email: 'visitante@sgapm.com',
+                nome: 'Visitante',
+                tipo: 'visitante'
+            };
+            localStorage.setItem('@SGAPM:usuario', JSON.stringify(usuarioAtual));
+            showDashboard();
         }
 
         // ============================================
@@ -284,7 +325,7 @@
             if (fazerLogin(email, senha)) {
                 showDashboard();
             } else {
-                alert('❌ E-mail ou senha inválidos!\n\n📌 Use:\n- visitante@sgapm.com / visitante\n- admin@sgapm.com / admin123\n- usuario@sgapm.com / user123');
+                alert('❌ E-mail ou senha inválidos!\n\n📌 Use:\n- admin@sgapm.com / admin123\n- victor.ues@mixtel.com.br / 2580\n- rafael.silva@mixtel.com.br / 1234');
             }
         }
 
